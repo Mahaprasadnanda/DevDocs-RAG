@@ -5,7 +5,7 @@ from app.vector_store.embeddings import EmbeddingService
 
 @pytest.fixture
 def mock_sentence_transformer():
-    with patch("app.vector_store.embeddings.SentenceTransformer") as mock_st:
+    with patch("sentence_transformers.SentenceTransformer") as mock_st:
         mock_instance = MagicMock()
         mock_st.return_value = mock_instance
         # Fake dimension 384
