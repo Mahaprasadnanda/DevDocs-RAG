@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 100
     CHUNKING_OUTPUT_DIR: str = "data/chunks"
     
+    # Vector Index Settings
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
+    EMBEDDING_BATCH_SIZE: int = 32
+    INDEX_OUTPUT_DIR: str = "data/index"
+    
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

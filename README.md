@@ -28,7 +28,15 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Intelligently chunks text by searching for natural boundaries (paragraphs, sentences, words) before falling back to hard splits.
 - Preserves all crucial source metadata per chunk (document ID, section headings, URL, canonical URL).
 - Persists chunk records individually to prepare for embeddings.
-- *Note: Embeddings, FAISS indexing, and LLM implementations are NOT yet implemented.*
+
+**Milestone 4 completed:** Embeddings and Persistent FAISS Index
+- Generates 384-dimensional dense vector embeddings for chunks using `sentence-transformers/all-MiniLM-L6-v2`.
+- Text embeddings represent semantic meaning numerically, allowing similarity comparisons.
+- Employs batch processing and float32 mathematical normalizations to ensure vector scale consistency (unit length).
+- Indexes vectors exactly using FAISS `IndexFlatIP`. Normalized vectors allow inner product to correspond directly to cosine similarity search, avoiding expensive metric calculations.
+- Persists the searchable binary FAISS index alongside a consistent JSON metadata manifest linking each vector position strictly back to its source chunk metadata.
+
+*Note: Query generation, RAG logic, and LLM integrations are NOT yet implemented.*
 
 ## Technology Stack
 
@@ -40,6 +48,9 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Pytest
 - HTTPX
 - BeautifulSoup 4
+- Sentence Transformers
+- FAISS (CPU)
+- NumPy
 
 ### Frontend
 - React
@@ -56,8 +67,9 @@ devdocs-rag/
 │   │   ├── chunking/ # Text chunking pipeline
 │   │   ├── core/     # Configuration
 │   │   ├── ingestion/# Documentation ingestion pipeline
+│   │   ├── vector_store/ # FAISS embedding/indexing system
 │   │   └── main.py   # Application entry point
-│   ├── data/         # Ignored local data (ingested/ and chunks/)
+│   ├── data/         # Ignored local data (ingested/, chunks/, index/)
 │   ├── tests/        # Pytest test suite
 │   └── requirements.txt
 ├── frontend/         # React frontend scaffold
@@ -116,6 +128,14 @@ python -m app.chunking.pipeline
 ```
 *Generated chunks will be written to `backend/data/chunks/`.*
 
+**Step 3: Vector Indexing**
+To embed chunks numerically and populate a persistent FAISS index for semantic search:
+```powershell
+cd backend
+python -m app.vector_store.pipeline
+```
+*(This performs a one-time download of the Sentence Transformers model locally). Generated index artifacts are written to `backend/data/index/`.*
+
 ### Testing
 
 Run the pytest suite to verify endpoints and data pipeline components (from the `backend` directory):
@@ -137,10 +157,12 @@ npm run dev
 - The ingestion pipeline's HTML extraction is tailored primarily for MkDocs Material structures (used by FastAPI official docs). 
 - Text is normalized for markdown-like chunking, but formatting inside tables and deep nested HTML might be flattened.
 - Section-heading reconstruction binds to the last seen known header in the chunk's content, which works for sequential text but is an approximation rather than a DOM-parsed DOM path.
+- Search leverages exact exhaustive inner-product FAISS queries; it is fast for a few thousand vectors but would require migrating to an approximate graph (e.g. HNSW) at millions of vectors.
 
 ## Milestone Roadmap
 
 - **Milestone 1:** Project Foundation (Completed)
 - **Milestone 2:** Documentation Ingestion and Extraction (Completed)
 - **Milestone 3:** Document Chunking and Metadata (Completed)
-- **Milestone 4:** Vector Embeddings and FAISS indexing (Upcoming)
+- **Milestone 4:** Vector Embeddings and FAISS Indexing (Completed)
+- **Milestone 5:** Top-K Retrieval API (Upcoming)
