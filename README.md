@@ -15,7 +15,14 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Verified local development environment setup.
 - Setup testing and `.gitignore`.
 
-*Note: Semantic retrieval, RAG, citations, debugging, and LLM integration are NOT yet implemented.*
+**Milestone 2 completed:** Documentation Ingestion and Extraction
+- Maintains a curated list of official FastAPI documentation URLs.
+- Fetches HTML pages over HTTP with HTTPX, utilizing configured timeouts and response size limits.
+- Validates HTTP responses and captures network/HTML extraction failures gracefully without crashing.
+- Parses HTML using BeautifulSoup 4 to extract the main article content, removing navigation, sidebars, and scripts.
+- Persists structured JSON document records (titles, headings, cleaned text, source URLs) locally.
+
+*Note: Semantic retrieval, text chunking, FAISS, embeddings, and LLM integration are NOT yet implemented.*
 
 ## Technology Stack
 
@@ -25,6 +32,8 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Uvicorn
 - Pydantic
 - Pytest
+- HTTPX
+- BeautifulSoup 4
 
 ### Frontend
 - React
@@ -39,7 +48,9 @@ devdocs-rag/
 │   ├── app/
 │   │   ├── api/      # API routes
 │   │   ├── core/     # Configuration
+│   │   ├── ingestion/# Documentation ingestion pipeline
 │   │   └── main.py   # Application entry point
+│   ├── data/         # Ignored local data (e.g., ingested JSON records)
 │   ├── tests/        # Pytest test suite
 │   └── requirements.txt
 ├── frontend/         # React frontend scaffold
@@ -80,9 +91,18 @@ Verify the backend is running by navigating to the health endpoint in your brows
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/health/
 ```
 
+### Run Ingestion Pipeline
+
+To run the offline documentation ingestion pipeline and generate local JSON document records:
+```powershell
+cd backend
+python -m app.ingestion.pipeline
+```
+*Extracted JSON documents will be written to `backend/data/ingested/`.*
+
 ### Testing
 
-Run the pytest suite to verify endpoints (from the `backend` directory):
+Run the pytest suite to verify endpoints and ingestion pipeline components (from the `backend` directory):
 ```powershell
 cd backend
 python -m pytest tests/
@@ -97,7 +117,12 @@ npm install
 npm run dev
 ```
 
+## Limitations
+- The ingestion pipeline's HTML extraction is tailored primarily for MkDocs Material structures (used by FastAPI official docs). 
+- Text is normalized for markdown-like chunking, but formatting inside tables and deep nested HTML might be flattened.
+
 ## Milestone Roadmap
 
-- **Milestone 1:** Project Foundation (Current)
-- **Milestone 2:** Documentation Ingestion and Extraction (Upcoming)
+- **Milestone 1:** Project Foundation (Completed)
+- **Milestone 2:** Documentation Ingestion and Extraction (Completed)
+- **Milestone 3:** Document Chunking and Metadata (Upcoming)

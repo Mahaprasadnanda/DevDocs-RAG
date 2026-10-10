@@ -38,3 +38,6 @@ Thumbs.db
 *.faiss
 *.pkl
 models/
+
+# Ingestion output
+backend/data/
