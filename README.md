@@ -36,7 +36,13 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Indexes vectors exactly using FAISS `IndexFlatIP`. Normalized vectors allow inner product to correspond directly to cosine similarity search, avoiding expensive metric calculations.
 - Persists the searchable binary FAISS index alongside a consistent JSON metadata manifest linking each vector position strictly back to its source chunk metadata.
 
-*Note: Query generation, RAG logic, and LLM integrations are NOT yet implemented.*
+**Milestone 5 completed:** Semantic Retrieval and Top-K Search
+- Validates queries and expected capacities dynamically (e.g., whitespace constraints, FAISS capacity bounds).
+- Embeds natural-language queries uniformly with the index using `all-MiniLM-L6-v2`.
+- Executes lightning-fast exhaustive `IndexFlatIP` dot-product mapping (Cosine Similarity) yielding top-K similarity boundaries.
+- Links search vector coordinates recursively back into source `ChunkRecord` metadata, providing clean HTTP endpoints exposing `section_title`, `score`, and chunk identifiers natively.
+- Prevents redundant model/index cold-loading utilizing API lifecycle boundaries, optimizing inference memory.
+- *Note: Generative AI inference (LLMs), chat memory, and frontends are NOT yet implemented.*
 
 ## Technology Stack
 
@@ -67,6 +73,7 @@ devdocs-rag/
 │   │   ├── chunking/ # Text chunking pipeline
 │   │   ├── core/     # Configuration
 │   │   ├── ingestion/# Documentation ingestion pipeline
+│   │   ├── retrieval/# Query vector mapping & Semantic Retrieval
 │   │   ├── vector_store/ # FAISS embedding/indexing system
 │   │   └── main.py   # Application entry point
 │   ├── data/         # Ignored local data (ingested/, chunks/, index/)
@@ -103,11 +110,16 @@ cd backend
 uvicorn app.main:app --reload
 ```
 
-### Health Endpoint
+### Endpoints
 
-Verify the backend is running by navigating to the health endpoint in your browser or using `Invoke-RestMethod`:
+**Health:** Verify the backend is running.
 ```powershell
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/health/
+```
+
+**Retrieval (Top-K):** Semantically retrieve top documentation matches.
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/retrieve/ -Method POST -ContentType "application/json" -Body '{"query": "How do I define a POST endpoint in FastAPI?", "top_k": 3}'
 ```
 
 ### Run Data Pipelines
@@ -165,4 +177,5 @@ npm run dev
 - **Milestone 2:** Documentation Ingestion and Extraction (Completed)
 - **Milestone 3:** Document Chunking and Metadata (Completed)
 - **Milestone 4:** Vector Embeddings and FAISS Indexing (Completed)
-- **Milestone 5:** Top-K Retrieval API (Upcoming)
+- **Milestone 5:** Semantic Retrieval and Top-K Search (Completed)
+- **Milestone 6:** Generative LLM Integration (Upcoming)
