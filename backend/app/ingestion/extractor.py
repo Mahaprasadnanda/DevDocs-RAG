@@ -50,6 +50,10 @@ def extract_document(html_content: str, source_url: str) -> DocumentRecord:
     for element in main_content.find_all(class_=["md-sidebar", "toc"]):
         element.decompose()
         
+    # Remove headerlink anchors which cause trailing artifact text (e.g., '¶', 'A ')
+    for element in main_content.find_all("a", class_="headerlink"):
+        element.decompose()
+        
     # 5. Extract headings
     headings = []
     for heading in main_content.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):

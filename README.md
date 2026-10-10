@@ -22,7 +22,13 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Parses HTML using BeautifulSoup 4 to extract the main article content, removing navigation, sidebars, and scripts.
 - Persists structured JSON document records (titles, headings, cleaned text, source URLs) locally.
 
-*Note: Semantic retrieval, text chunking, FAISS, embeddings, and LLM integration are NOT yet implemented.*
+**Milestone 3 completed:** Text Chunking and Metadata Preservation
+- Reads the ingested JSON documentation records.
+- Deterministically splits documents into overlapping chunks (default 700 chars, 100 char overlap).
+- Intelligently chunks text by searching for natural boundaries (paragraphs, sentences, words) before falling back to hard splits.
+- Preserves all crucial source metadata per chunk (document ID, section headings, URL, canonical URL).
+- Persists chunk records individually to prepare for embeddings.
+- *Note: Embeddings, FAISS indexing, and LLM implementations are NOT yet implemented.*
 
 ## Technology Stack
 
@@ -47,10 +53,11 @@ devdocs-rag/
 ├── backend/          # FastAPI backend
 │   ├── app/
 │   │   ├── api/      # API routes
+│   │   ├── chunking/ # Text chunking pipeline
 │   │   ├── core/     # Configuration
 │   │   ├── ingestion/# Documentation ingestion pipeline
 │   │   └── main.py   # Application entry point
-│   ├── data/         # Ignored local data (e.g., ingested JSON records)
+│   ├── data/         # Ignored local data (ingested/ and chunks/)
 │   ├── tests/        # Pytest test suite
 │   └── requirements.txt
 ├── frontend/         # React frontend scaffold
@@ -91,8 +98,9 @@ Verify the backend is running by navigating to the health endpoint in your brows
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/health/
 ```
 
-### Run Ingestion Pipeline
+### Run Data Pipelines
 
+**Step 1: Documentation Ingestion**
 To run the offline documentation ingestion pipeline and generate local JSON document records:
 ```powershell
 cd backend
@@ -100,9 +108,17 @@ python -m app.ingestion.pipeline
 ```
 *Extracted JSON documents will be written to `backend/data/ingested/`.*
 
+**Step 2: Text Chunking**
+To chunk the ingested documentation into overlapping segments:
+```powershell
+cd backend
+python -m app.chunking.pipeline
+```
+*Generated chunks will be written to `backend/data/chunks/`.*
+
 ### Testing
 
-Run the pytest suite to verify endpoints and ingestion pipeline components (from the `backend` directory):
+Run the pytest suite to verify endpoints and data pipeline components (from the `backend` directory):
 ```powershell
 cd backend
 python -m pytest tests/
@@ -120,9 +136,11 @@ npm run dev
 ## Limitations
 - The ingestion pipeline's HTML extraction is tailored primarily for MkDocs Material structures (used by FastAPI official docs). 
 - Text is normalized for markdown-like chunking, but formatting inside tables and deep nested HTML might be flattened.
+- Section-heading reconstruction binds to the last seen known header in the chunk's content, which works for sequential text but is an approximation rather than a DOM-parsed DOM path.
 
 ## Milestone Roadmap
 
 - **Milestone 1:** Project Foundation (Completed)
 - **Milestone 2:** Documentation Ingestion and Extraction (Completed)
-- **Milestone 3:** Document Chunking and Metadata (Upcoming)
+- **Milestone 3:** Document Chunking and Metadata (Completed)
+- **Milestone 4:** Vector Embeddings and FAISS indexing (Upcoming)

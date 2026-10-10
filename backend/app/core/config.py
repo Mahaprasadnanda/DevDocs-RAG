@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     INGESTION_OUTPUT_DIR: str = "data/ingested"
     INGESTION_USER_AGENT: str = "DevDocs-RAG-Ingestion-Bot/1.0"
     
+    # Chunking Settings
+    CHUNK_SIZE: int = 700
+    CHUNK_OVERLAP: int = 100
+    CHUNKING_OUTPUT_DIR: str = "data/chunks"
+    
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

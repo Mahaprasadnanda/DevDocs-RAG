@@ -12,9 +12,9 @@ SAMPLE_HTML = """
     <header>Site Header</header>
     <nav class="md-sidebar">Sidebar content</nav>
     <article class="md-content__inner">
-        <h1>First Steps</h1>
+        <h1>First Steps<a class="headerlink" href="#first-steps" title="Permanent link">A </a></h1>
         <p>Here are the first steps to use FastAPI.</p>
-        <h2>Create it</h2>
+        <h2>Create it<a class="headerlink" href="#create-it" title="Permanent link">¶</a></h2>
         <p>Create a file <code>main.py</code> with:</p>
         <pre><code>from fastapi import FastAPI</code></pre>
         <script>alert("test");</script>
