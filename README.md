@@ -42,134 +42,200 @@ This project aims to use Retrieval-Augmented Generation (RAG) to answer develope
 - Executes lightning-fast exhaustive `IndexFlatIP` dot-product mapping (Cosine Similarity) yielding top-K similarity boundaries.
 - Links search vector coordinates recursively back into source `ChunkRecord` metadata, providing clean HTTP endpoints exposing `section_title`, `score`, and chunk identifiers natively.
 - Prevents redundant model/index cold-loading utilizing API lifecycle boundaries, optimizing inference memory.
-- *Note: Generative AI inference (LLMs), chat memory, and frontends are NOT yet implemented.*
+
+**Milestone 6 completed:** Groq LLM Integration, Grounded Answer Generation, Frontend Connection, and Docker Deployment
+- Integrated official Groq client (`GroqLLMClient`) supporting `llama-3.3-70b-versatile` by default with structured error handling for configuration, timeout, and provider errors.
+- Built a bounded context assembler (`build_context`) that trims retrieved chunks within character budgets while preserving chunk-source mappings (`[S1]`, `[S2]`, etc.).
+- Designed a grounded RAG generation pipeline (`RAGService`) with strict anti-hallucination prompts requiring citations and transparent fallback when documentation does not contain answers.
+- Implemented `POST /api/v1/ask/` API endpoint returning structured answers, citation references, retrieved context excerpts, and latency metrics.
+- Developed an interactive React + TypeScript UI with search input, loading indicators, code block formatting, citation badges, clickable source links, and clear error banners.
+- Containerized both backend and frontend using Docker, multi-stage builds, Nginx reverse proxy, and Docker Compose orchestration with automated healthchecks.
 
 ## Technology Stack
 
 ### Backend
-- Python
-- FastAPI
-- Uvicorn
-- Pydantic
-- Pytest
-- HTTPX
-- BeautifulSoup 4
-- Sentence Transformers
-- FAISS (CPU)
-- NumPy
+- Python 3.12+
+- FastAPI & Uvicorn
+- Groq SDK (`groq`)
+- Sentence Transformers (`all-MiniLM-L6-v2`)
+- FAISS (CPU `IndexFlatIP`)
+- Pydantic & Pydantic-Settings
+- Pytest & HTTPX
+- BeautifulSoup 4 & NumPy
 
 ### Frontend
-- React
+- React 18 & TypeScript
 - Vite
-- TypeScript
+- Lucide React (Icons)
 
-## Initial Architecture
+### Deployment & Infrastructure
+- Docker & Docker Compose
+- Nginx (Alpine) as frontend web server & reverse proxy
+
+## Architecture
 
 ```
 devdocs-rag/
-├── backend/          # FastAPI backend
+├── backend/                  # FastAPI backend
 │   ├── app/
-│   │   ├── api/      # API routes
-│   │   ├── chunking/ # Text chunking pipeline
-│   │   ├── core/     # Configuration
-│   │   ├── ingestion/# Documentation ingestion pipeline
-│   │   ├── retrieval/# Query vector mapping & Semantic Retrieval
-│   │   ├── vector_store/ # FAISS embedding/indexing system
-│   │   └── main.py   # Application entry point
-│   ├── data/         # Ignored local data (ingested/, chunks/, index/)
-│   ├── tests/        # Pytest test suite
+│   │   ├── api/routes/       # API endpoints (health, retrieve, ask)
+│   │   ├── chunking/         # Text chunking pipeline
+│   │   ├── core/             # Configuration & settings
+│   │   ├── ingestion/        # Documentation ingestion pipeline
+│   │   ├── llm/              # Groq LLM client wrapper & exceptions
+│   │   ├── rag/              # RAG orchestration, context builder & prompts
+│   │   ├── retrieval/        # Query embedding & semantic retrieval
+│   │   ├── vector_store/     # FAISS embedding/indexing system
+│   │   └── main.py           # Application entry point & lifespan manager
+│   ├── data/                 # Local data artifacts (ingested/, chunks/, index/)
+│   ├── tests/                # Comprehensive test suite (77 tests across M1-M6)
+│   ├── Dockerfile            # Container definition for FastAPI backend
 │   └── requirements.txt
-├── frontend/         # React frontend scaffold
+├── frontend/                 # React + TypeScript frontend
+│   ├── src/                  # Application components, styles, types
+│   ├── nginx.conf            # Nginx config forwarding /api/ to backend
+│   ├── Dockerfile            # Multi-stage production container build
+│   └── package.json
+├── docker-compose.yml        # Orchestration for frontend & backend services
+├── .env.example              # Environment variables template
 └── README.md
 ```
 
-## Setup Instructions (Windows PowerShell)
+## Setup & Running Instructions
 
-### Backend Setup
+### Option 1: Running with Docker Compose (Recommended)
 
-1. Create a Python virtual environment:
-   ```powershell
-   python -m venv .venv
+1. **Configure Environment:**
+   Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+   Add your Groq API key in `.env`:
+   ```env
+   GROQ_API_KEY=gsk_your_actual_groq_api_key_here
+   ```
+   *(Note: The application will start and serve retrieval queries even without an API key; answer generation requires a valid key.)*
+
+2. **Start Services:**
+   ```bash
+   docker compose up -d
    ```
 
-2. Activate the virtual environment:
+3. **Access Services:**
+   - **Frontend UI:** [http://localhost:3000](http://localhost:3000)
+   - **Backend API & Swagger Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+   - **Backend Health Check:** [http://localhost:8000/api/v1/health/](http://localhost:8000/api/v1/health/)
+
+4. **Stop Services:**
+   ```bash
+   docker compose down
+   ```
+
+---
+
+### Option 2: Running Locally (Windows PowerShell)
+
+#### Backend Setup
+
+1. Create and activate a Python virtual environment:
    ```powershell
+   python -m venv .venv
    .\.venv\Scripts\Activate.ps1
    ```
 
-3. Install dependencies:
+2. Install dependencies:
    ```powershell
    pip install -r backend\requirements.txt
    ```
 
-### Backend Startup
+3. Configure environment variables in `backend/.env` or PowerShell:
+   ```powershell
+   $env:GROQ_API_KEY="gsk_your_groq_api_key"
+   ```
 
-Start the FastAPI development server:
-```powershell
-cd backend
-uvicorn app.main:app --reload
-```
+4. Start FastAPI server:
+   ```powershell
+   cd backend
+   uvicorn app.main:app --reload --port 8000
+   ```
 
-### Endpoints
+#### Frontend Setup
 
-**Health:** Verify the backend is running.
+1. Install frontend dependencies and run Vite dev server:
+   ```powershell
+   cd frontend
+   npm install
+   npm run dev
+   ```
+   The dev server will proxy `/api` requests to `http://localhost:8000`.
+
+---
+
+## API Endpoints
+
+### 1. Health Check
 ```powershell
 Invoke-RestMethod -Uri http://localhost:8000/api/v1/health/
 ```
 
-**Retrieval (Top-K):** Semantically retrieve top documentation matches.
+### 2. Semantic Retrieval (Top-K Search)
 ```powershell
-Invoke-RestMethod -Uri http://localhost:8000/api/v1/retrieve/ -Method POST -ContentType "application/json" -Body '{"query": "How do I define a POST endpoint in FastAPI?", "top_k": 3}'
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/retrieve/ `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"query": "How do I define path parameters in FastAPI?", "top_k": 3}'
 ```
 
-### Run Data Pipelines
+### 3. Grounded Question Answering (RAG)
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/api/v1/ask/ `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"query": "How do path parameters work in FastAPI?", "top_k": 3}'
+```
+
+---
+
+## Running Data Pipelines
 
 **Step 1: Documentation Ingestion**
-To run the offline documentation ingestion pipeline and generate local JSON document records:
 ```powershell
 cd backend
 python -m app.ingestion.pipeline
 ```
-*Extracted JSON documents will be written to `backend/data/ingested/`.*
+*Extracted JSON documents are written to `backend/data/ingested/`.*
 
 **Step 2: Text Chunking**
-To chunk the ingested documentation into overlapping segments:
 ```powershell
 cd backend
 python -m app.chunking.pipeline
 ```
-*Generated chunks will be written to `backend/data/chunks/`.*
+*Generated chunks are written to `backend/data/chunks/`.*
 
 **Step 3: Vector Indexing**
-To embed chunks numerically and populate a persistent FAISS index for semantic search:
 ```powershell
 cd backend
 python -m app.vector_store.pipeline
 ```
-*(This performs a one-time download of the Sentence Transformers model locally). Generated index artifacts are written to `backend/data/index/`.*
+*Generated FAISS index and metadata manifest are written to `backend/data/index/`.*
 
-### Testing
+---
 
-Run the pytest suite to verify endpoints and data pipeline components (from the `backend` directory):
+## Automated Testing
+
+Run the full pytest test suite (77 unit and integration tests covering Milestones 1–6):
 ```powershell
 cd backend
-python -m pytest tests/
+python -m pytest tests/ -v
 ```
 
-### Frontend Startup
-
-Start the frontend development server:
-```powershell
-cd frontend
-npm install
-npm run dev
-```
+---
 
 ## Limitations
-- The ingestion pipeline's HTML extraction is tailored primarily for MkDocs Material structures (used by FastAPI official docs). 
-- Text is normalized for markdown-like chunking, but formatting inside tables and deep nested HTML might be flattened.
-- Section-heading reconstruction binds to the last seen known header in the chunk's content, which works for sequential text but is an approximation rather than a DOM-parsed DOM path.
-- Search leverages exact exhaustive inner-product FAISS queries; it is fast for a few thousand vectors but would require migrating to an approximate graph (e.g. HNSW) at millions of vectors.
+
+- Grounded generation relies strictly on retrieved documentation chunks. If official documentation does not cover the question, the assistant explicitly states it cannot answer based on retrieved context.
+- Indexing currently uses exact CPU inner-product search (`IndexFlatIP`). While ultra-fast for hundreds/thousands of documentation chunks, expanding to millions would require an approximate nearest-neighbor index (e.g., FAISS HNSW or IVF).
+- LLM response generation requires an active internet connection and valid Groq API key.
 
 ## Milestone Roadmap
 
@@ -178,4 +244,5 @@ npm run dev
 - **Milestone 3:** Document Chunking and Metadata (Completed)
 - **Milestone 4:** Vector Embeddings and FAISS Indexing (Completed)
 - **Milestone 5:** Semantic Retrieval and Top-K Search (Completed)
-- **Milestone 6:** Generative LLM Integration (Upcoming)
+- **Milestone 6:** Groq LLM Integration, Grounded Answer Generation, Frontend Connection, and Docker Deployment (Completed)
+
