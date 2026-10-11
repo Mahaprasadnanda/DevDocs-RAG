@@ -94,3 +94,87 @@ def test_rate_limit_mapped_to_provider_error():
 
     with pytest.raises(GroqProviderError, match="RateLimitError"):
         client.generate([{"role": "user", "content": "hi"}])
+
+
+def test_not_found_error_mapped_to_provider_error():
+    client = GroqLLMClient(api_key="gsk-testkey")
+    mock_groq = MagicMock()
+
+    class FakeNotFoundError(Exception):
+        pass
+    FakeNotFoundError.__name__ = "NotFoundError"
+
+    mock_groq.chat.completions.create.side_effect = FakeNotFoundError("Unknown request URL: POST /openai/v1/openai/v1/chat/completions")
+    client._client = mock_groq
+
+    with pytest.raises(GroqProviderError, match="NotFoundError"):
+        client.generate([{"role": "user", "content": "hi"}])
+
+
+def test_groq_client_default_base_url_url_construction():
+    import httpx
+    captured_urls = []
+
+    def mock_transport_handler(request: httpx.Request) -> httpx.Response:
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "Grounded answer"}}]}
+        )
+
+    client = GroqLLMClient(api_key="gsk-test", base_url="https://api.groq.com")
+    raw_groq = client._get_client()
+    raw_groq._client = httpx.Client(transport=httpx.MockTransport(mock_transport_handler))
+
+    res = client.generate([{"role": "user", "content": "test query"}])
+    assert res == "Grounded answer"
+    assert len(captured_urls) == 1
+    assert captured_urls[0] == "https://api.groq.com/openai/v1/chat/completions"
+    assert "/openai/v1/openai/v1" not in captured_urls[0]
+
+
+def test_groq_client_normalizes_legacy_base_url_preventing_duplicate():
+    import httpx
+    captured_urls = []
+
+    def mock_transport_handler(request: httpx.Request) -> httpx.Response:
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "Grounded answer"}}]}
+        )
+
+    # When configured with legacy or stale https://api.groq.com/openai/v1
+    client = GroqLLMClient(api_key="gsk-test", base_url="https://api.groq.com/openai/v1")
+    raw_groq = client._get_client()
+    raw_groq._client = httpx.Client(transport=httpx.MockTransport(mock_transport_handler))
+
+    res = client.generate([{"role": "user", "content": "test query"}])
+    assert res == "Grounded answer"
+    assert len(captured_urls) == 1
+    assert "/openai/v1/openai/v1" not in captured_urls[0]
+    assert captured_urls[0] == "https://api.groq.com/openai/v1/chat/completions"
+
+
+def test_groq_client_normalizes_trailing_slash_base_url():
+    import httpx
+    captured_urls = []
+
+    def mock_transport_handler(request: httpx.Request) -> httpx.Response:
+        captured_urls.append(str(request.url))
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "Grounded answer"}}]}
+        )
+
+    # When configured with trailing slash
+    client = GroqLLMClient(api_key="gsk-test", base_url="https://api.groq.com/openai/v1/")
+    raw_groq = client._get_client()
+    raw_groq._client = httpx.Client(transport=httpx.MockTransport(mock_transport_handler))
+
+    res = client.generate([{"role": "user", "content": "test query"}])
+    assert res == "Grounded answer"
+    assert len(captured_urls) == 1
+    assert "/openai/v1/openai/v1" not in captured_urls[0]
+    assert captured_urls[0] == "https://api.groq.com/openai/v1/chat/completions"
+

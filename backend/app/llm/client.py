@@ -50,6 +50,20 @@ class GroqLLMClient:
         key = self.api_key
         return bool(key and key.strip())
 
+    def _normalize_base_url(self, raw_url: Optional[str]) -> Optional[str]:
+        """
+        Normalize the base URL for the official Groq SDK.
+        The Groq SDK internally appends '/openai/v1/chat/completions' to its base_url.
+        If a user or environment passes 'https://api.groq.com/openai/v1' or 'https://api.groq.com/openai/v1/',
+        strip the trailing '/openai/v1' path to prevent duplication (/openai/v1/openai/v1).
+        """
+        if not raw_url:
+            return None
+        url = raw_url.strip().rstrip("/")
+        if url.endswith("/openai/v1"):
+            url = url[:-len("/openai/v1")].rstrip("/")
+        return url or None
+
     def _get_client(self):
         key = self.api_key
         if not key or not key.strip():
@@ -58,9 +72,10 @@ class GroqLLMClient:
             )
         if self._client is None:
             from groq import Groq
+            normalized_base = self._normalize_base_url(self.base_url)
             self._client = Groq(
                 api_key=key.strip(),
-                base_url=self.base_url,
+                base_url=normalized_base,
                 timeout=self.timeout
             )
         return self._client
@@ -103,7 +118,7 @@ class GroqLLMClient:
             elif "APITimeoutError" in err_type or "Timeout" in err_type:
                 logger.error("Groq API request timed out")
                 raise GroqTimeoutError("Request to Groq API timed out.") from e
-            elif any(t in err_type for t in ["RateLimitError", "APIConnectionError", "APIStatusError", "InternalServerError"]):
+            elif any(t in err_type for t in ["RateLimitError", "APIConnectionError", "APIStatusError", "InternalServerError", "NotFoundError"]):
                 logger.error(f"Groq upstream failure: {err_type}")
                 raise GroqProviderError(f"Groq provider error: {err_type}") from e
             elif isinstance(e, GroqProviderError):

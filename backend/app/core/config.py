@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # Groq LLM Settings
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
-    GROQ_BASE_URL: str = "https://api.groq.com/openai/v1"
+    GROQ_BASE_URL: str = "https://api.groq.com"
     GROQ_TIMEOUT_SECONDS: float = 30.0
     RAG_CONTEXT_MAX_CHARS: int = 4000
     
