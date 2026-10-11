@@ -18,7 +18,12 @@ class RAGService:
         self.retrieval_svc = retrieval_svc or retrieval_service
         self.llm = llm or groq_client
 
-    def answer(self, query: str, top_k: int = 8) -> AskResponse:
+    def answer(
+        self,
+        query: str,
+        top_k: int = 8,
+        min_score: Optional[float] = None
+    ) -> AskResponse:
         """
         Orchestrate retrieval and grounded answer generation.
         """
@@ -31,12 +36,12 @@ class RAGService:
         clean_query = query.strip()
         logger.info(f"Retrieving context for query: '{clean_query[:50]}...' with top_k={top_k}")
 
-        # 1. Retrieve top-k chunks
-        results = self.retrieval_svc.retrieve(clean_query, top_k=top_k)
+        # 1. Retrieve top-k chunks (with relevance thresholding)
+        results = self.retrieval_svc.retrieve(clean_query, top_k=top_k, min_score=min_score)
 
-        # 2. Handle empty retrieval result
+        # 2. Handle empty retrieval result (out-of-domain or below relevance threshold)
         if not results:
-            logger.info("No matching chunks retrieved from index.")
+            logger.info("No matching chunks retrieved above relevance threshold.")
             return AskResponse(
                 query=clean_query,
                 answer="The indexed documentation does not contain enough relevant information to answer this question.",

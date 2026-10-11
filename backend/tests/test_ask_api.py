@@ -115,3 +115,17 @@ def test_retrieve_endpoint_still_works():
     # Ensure POST /api/v1/retrieve/ is preserved and functional
     resp = client.post("/api/v1/retrieve/", json={"query": ""})
     assert resp.status_code == 422
+
+@patch("app.api.routes.ask.rag_service")
+def test_ask_endpoint_with_min_score(mock_rag):
+    mock_rag.answer.return_value = AskResponse(
+        query="What is FastAPI?",
+        answer="FastAPI is a modern web framework.",
+        sources=[],
+        total_sources=0,
+        model="llama-3.3-70b-versatile"
+    )
+
+    resp = client.post("/api/v1/ask/", json={"query": "What is FastAPI?", "top_k": 5, "min_score": 0.40})
+    assert resp.status_code == 200
+    mock_rag.answer.assert_called_once_with(query="What is FastAPI?", top_k=5, min_score=0.40)

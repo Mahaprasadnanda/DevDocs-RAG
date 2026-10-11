@@ -4,6 +4,7 @@ from typing import List, Optional
 class RetrievalRequest(BaseModel):
     query: str = Field(..., description="The natural language query.")
     top_k: int = Field(8, gt=0, description="Maximum number of results to return.")
+    min_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Minimum similarity score threshold.")
 
 class RetrievalResult(BaseModel):
     chunk_id: str

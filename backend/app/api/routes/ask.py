@@ -23,7 +23,10 @@ def ask_question(request: AskRequest):
         )
 
     try:
-        response = rag_service.answer(query=request.query, top_k=request.top_k)
+        if request.min_score is not None:
+            response = rag_service.answer(query=request.query, top_k=request.top_k, min_score=request.min_score)
+        else:
+            response = rag_service.answer(query=request.query, top_k=request.top_k)
         return response
     except IndexUnavailableError as e:
         logger.error(f"Vector index unavailable: {e}")

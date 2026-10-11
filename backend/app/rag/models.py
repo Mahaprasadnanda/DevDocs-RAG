@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, HttpUrl
 class AskRequest(BaseModel):
     query: str = Field(..., description="The user's technical documentation question.")
     top_k: int = Field(8, gt=0, le=20, description="Maximum number of context chunks to retrieve.")
+    min_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Minimum similarity score threshold.")
 
 class SourceCitation(BaseModel):
     source_id: str = Field(..., description="Stable identifier used in citations, e.g. S1.")

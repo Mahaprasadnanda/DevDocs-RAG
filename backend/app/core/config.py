@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/all-MiniLM-L6-v2"
     EMBEDDING_BATCH_SIZE: int = 32
     INDEX_OUTPUT_DIR: str = "data/index"
+    RETRIEVAL_MIN_SCORE: float = 0.30
     
     # Groq LLM Settings
     GROQ_API_KEY: Optional[str] = None

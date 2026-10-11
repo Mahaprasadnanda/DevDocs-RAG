@@ -61,7 +61,7 @@ def test_rag_service_success(sample_retrieval_results):
     assert resp.sources[0].source_id == "S1"
     assert str(resp.sources[0].source_url) == "https://fastapi.tiangolo.com/tutorial/first-steps/"
     assert resp.model == "llama-3.3-70b-versatile"
-    mock_retrieval.retrieve.assert_called_once_with("How to create a POST endpoint?", top_k=2)
+    mock_retrieval.retrieve.assert_called_once_with("How to create a POST endpoint?", top_k=2, min_score=None)
     mock_llm.generate.assert_called_once()
 
 def test_rag_service_empty_retrieval():
@@ -79,6 +79,33 @@ def test_rag_service_empty_retrieval():
     assert "not contain enough relevant information" in resp.answer
     # LLM must NOT be called when retrieval returns 0 chunks
     mock_llm.generate.assert_not_called()
+
+def test_rag_service_out_of_domain_no_sources():
+    # Verify that an out-of-domain query (e.g. TCP vs UDP) which yields [] from retrieval
+    # results in an unanswerable response with zero citations and no LLM hallucination
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = []
+
+    mock_llm = MagicMock()
+    mock_llm.model = "openai/gpt-oss-120b"
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("What is the difference between TCP and UDP?", top_k=5)
+
+    assert resp.total_sources == 0
+    assert resp.sources == []
+    assert "not contain enough relevant information" in resp.answer
+    mock_llm.generate.assert_not_called()
+
+def test_rag_service_passes_min_score():
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = []
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    service.answer("query", top_k=4, min_score=0.45)
+    mock_retrieval.retrieve.assert_called_once_with("query", top_k=4, min_score=0.45)
 
 def test_rag_service_empty_or_whitespace_query():
     service = RAGService()

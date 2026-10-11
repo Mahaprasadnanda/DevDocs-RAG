@@ -89,3 +89,23 @@ def test_vector_store_cosine_similarity(tmp_path, dummy_chunks):
     # Should find vector 0 with similarity ~1.0
     assert indices[0][0] == 0
     assert np.isclose(distances[0][0], 1.0)
+
+def test_vector_store_stability_across_rebuilds_and_reloads(tmp_path, dummy_chunks, dummy_embeddings):
+    index_dir = str(tmp_path / "index_stability")
+    store = VectorStore(index_dir)
+    store.build(dummy_embeddings, dummy_chunks, "test-model-stability")
+    store.save()
+
+    # Verify reload 1
+    store_loaded_1 = VectorStore(index_dir)
+    store_loaded_1.load()
+    assert store_loaded_1.index.ntotal == len(dummy_chunks)
+    assert [c.chunk_id for c in store_loaded_1.metadata] == [c.chunk_id for c in dummy_chunks]
+
+    # Verify search results are identical between in-memory and reloaded
+    query = dummy_embeddings[2:3]
+    d1, i1 = store.index.search(query, k=3)
+    d2, i2 = store_loaded_1.index.search(query, k=3)
+    assert np.allclose(d1, d2)
+    assert np.array_equal(i1, i2)
+    assert store_loaded_1.metadata[i2[0][0]].chunk_id == store.metadata[i1[0][0]].chunk_id

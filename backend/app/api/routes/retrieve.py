@@ -10,7 +10,10 @@ def retrieve_documents(request: RetrievalRequest):
         raise HTTPException(status_code=422, detail="Query cannot be empty or whitespace only.")
         
     try:
-        results = retrieval_service.retrieve(request.query, request.top_k)
+        if request.min_score is not None:
+            results = retrieval_service.retrieve(request.query, request.top_k, min_score=request.min_score)
+        else:
+            results = retrieval_service.retrieve(request.query, request.top_k)
         return RetrievalResponse(
             query=request.query,
             results=results,

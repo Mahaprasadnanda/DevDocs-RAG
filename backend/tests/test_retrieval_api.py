@@ -68,3 +68,11 @@ def test_retrieve_endpoint_internal_error(mock_service):
     response = client.post("/api/v1/retrieve/", json={"query": "test"})
     assert response.status_code == 500
     assert response.json()["detail"] == "An internal server error occurred."
+
+@patch("app.api.routes.retrieve.retrieval_service")
+def test_retrieve_endpoint_with_min_score(mock_service):
+    mock_service.retrieve.return_value = []
+
+    response = client.post("/api/v1/retrieve/", json={"query": "test", "top_k": 4, "min_score": 0.50})
+    assert response.status_code == 200
+    mock_service.retrieve.assert_called_once_with("test", 4, min_score=0.50)

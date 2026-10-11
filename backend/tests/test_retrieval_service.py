@@ -131,3 +131,55 @@ def test_retrieve_nonfinite_score(retrieval_service, mock_store):
     results = retrieval_service.retrieve("query", top_k=2)
     assert len(results) == 1
     assert results[0].chunk_id == "chunk_1"
+
+def test_retrieve_threshold_filtering(retrieval_service, mock_store):
+    def fake_search_mixed(query_emb, k):
+        # Two above default 0.30 threshold, two below
+        distances = np.array([[0.85, 0.45, 0.25, 0.15]])
+        indices = np.array([[0, 1, 2, 3]])
+        return distances, indices
+
+    mock_store.index.search.side_effect = fake_search_mixed
+    results = retrieval_service.retrieve("FastAPI question", top_k=4)
+    assert len(results) == 2
+    assert results[0].score == 0.85
+    assert results[1].score == 0.45
+
+def test_retrieve_out_of_domain_filtered(retrieval_service, mock_store):
+    def fake_search_low(query_emb, k):
+        # All below default 0.30 threshold (e.g. TCP vs UDP against FastAPI docs)
+        distances = np.array([[0.20, 0.18, 0.15, 0.14, 0.12]])
+        indices = np.array([[0, 1, 2, 3, 4]])
+        return distances, indices
+
+    mock_store.index.search.side_effect = fake_search_low
+    results = retrieval_service.retrieve("What is the difference between TCP and UDP?", top_k=5)
+    assert len(results) == 0
+
+def test_retrieve_custom_min_score(retrieval_service, mock_store):
+    def fake_search_custom(query_emb, k):
+        distances = np.array([[0.90, 0.70, 0.50]])
+        indices = np.array([[0, 1, 2]])
+        return distances, indices
+
+    mock_store.index.search.side_effect = fake_search_custom
+    # Pass stricter threshold of 0.80
+    results = retrieval_service.retrieve("test", top_k=3, min_score=0.80)
+    assert len(results) == 1
+    assert results[0].score == 0.90
+
+    # Pass lenient threshold of 0.0
+    results_all = retrieval_service.retrieve("test", top_k=3, min_score=0.0)
+    assert len(results_all) == 3
+
+def test_retrieve_score_ordering_descending(retrieval_service, mock_store):
+    def fake_search_ordered(query_emb, k):
+        distances = np.array([[0.95, 0.85, 0.75, 0.65]])
+        indices = np.array([[0, 1, 2, 3]])
+        return distances, indices
+
+    mock_store.index.search.side_effect = fake_search_ordered
+    results = retrieval_service.retrieve("ordered query", top_k=4)
+    scores = [r.score for r in results]
+    assert scores == sorted(scores, reverse=True)
+    assert scores == [0.95, 0.85, 0.75, 0.65]

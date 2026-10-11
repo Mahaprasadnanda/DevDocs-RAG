@@ -1,6 +1,6 @@
 import logging
 import math
-from typing import List
+from typing import List, Optional
 from app.retrieval.models import RetrievalResult
 from app.vector_store.embeddings import EmbeddingService
 from app.vector_store.index import VectorStore
@@ -29,7 +29,12 @@ class RetrievalService:
                 logger.error(f"Error loading index: {e}")
                 raise IndexUnavailableError(f"Vector index could not be loaded: {e}")
                 
-    def retrieve(self, query: str, top_k: int = 8) -> List[RetrievalResult]:
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 8,
+        min_score: Optional[float] = None
+    ) -> List[RetrievalResult]:
         if not query or not query.strip():
             raise ValueError("Query cannot be empty.")
             
@@ -40,6 +45,8 @@ class RetrievalService:
         
         if self.store.index is None or self.store.index.ntotal == 0:
             return []
+            
+        threshold = min_score if min_score is not None else settings.RETRIEVAL_MIN_SCORE
             
         # Ensure we don't request more than available
         k = min(top_k, self.store.index.ntotal)
@@ -66,6 +73,10 @@ class RetrievalService:
                 
             if not math.isfinite(score):
                 logger.warning(f"Invalid FAISS score returned: {score}")
+                continue
+                
+            if threshold is not None and score < threshold:
+                logger.debug(f"Filtered chunk {idx} with score {score:.3f} below threshold {threshold}")
                 continue
                 
             chunk = self.store.metadata[idx]
