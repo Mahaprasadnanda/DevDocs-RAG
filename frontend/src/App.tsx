@@ -63,12 +63,36 @@ export function App() {
   const [debugError, setDebugError] = useState<string | null>(null)
   const [debugData, setDebugData] = useState<DebugResponse | null>(null)
 
+  const formatErrorMessage = (res: Response, json: any): string => {
+    if (res.status === 422) {
+      if (typeof json?.detail === 'string') return json.detail
+      if (Array.isArray(json?.detail)) {
+        return json.detail.map((d: any) => d.msg || 'Invalid field').join(', ')
+      }
+      return 'Input validation failed. Please check your query or input.'
+    }
+    if (res.status === 502) {
+      return 'Upstream AI provider error: The Groq LLM service reported an upstream error. Please retry shortly.'
+    }
+    if (res.status === 503) {
+      return 'Service unavailable: Vector search index or LLM configuration is unavailable.'
+    }
+    if (res.status === 504) {
+      return 'Request timeout: Upstream AI provider took too long to respond. Please try again.'
+    }
+    if (res.status >= 500) {
+      return 'Internal server error: An unexpected error occurred while processing your request.'
+    }
+    return json?.detail || 'An unexpected error occurred.'
+  }
+
   const handleAskSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim() || askLoading) return
 
     setAskLoading(true)
     setAskError(null)
+    setAskData(null) // Prevents displaying stale response/citations while loading or on error
 
     try {
       const res = await fetch('/api/v1/ask/', {
@@ -80,15 +104,16 @@ export function App() {
       const json = await res.json()
 
       if (!res.ok) {
-        const detailMsg = typeof json.detail === 'string'
-          ? json.detail
-          : (Array.isArray(json.detail) ? json.detail.map((d: any) => d.msg).join(', ') : 'Failed to generate answer')
-        throw new Error(detailMsg)
+        throw new Error(formatErrorMessage(res, json))
       }
 
       setAskData(json)
     } catch (err: any) {
-      setAskError(err.message || 'An unexpected error occurred.')
+      if (err.name === 'TypeError' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setAskError('Network connection error: Unable to reach backend server. Please verify connection.')
+      } else {
+        setAskError(err.message || 'An unexpected error occurred.')
+      }
     } finally {
       setAskLoading(false)
     }
@@ -100,6 +125,7 @@ export function App() {
 
     setDebugLoading(true)
     setDebugError(null)
+    setDebugData(null) // Prevents displaying stale diagnosis/citations while loading or on error
 
     try {
       const res = await fetch('/api/v1/debug/', {
@@ -117,21 +143,22 @@ export function App() {
       const json = await res.json()
 
       if (!res.ok) {
-        const detailMsg = typeof json.detail === 'string'
-          ? json.detail
-          : (Array.isArray(json.detail) ? json.detail.map((d: any) => d.msg).join(', ') : 'Failed to diagnose error')
-        throw new Error(detailMsg)
+        throw new Error(formatErrorMessage(res, json))
       }
 
       setDebugData(json)
     } catch (err: any) {
-      setDebugError(err.message || 'An unexpected error occurred.')
+      if (err.name === 'TypeError' || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError')) {
+        setDebugError('Network connection error: Unable to reach backend server. Please verify connection.')
+      } else {
+        setDebugError(err.message || 'An unexpected error occurred.')
+      }
     } finally {
       setDebugLoading(false)
     }
   }
 
-  // Safe formatting of answer with markdown code blocks and paragraphs
+  // Safe formatting of text with markdown code blocks and paragraphs
   const renderFormattedText = (text: string, sources: SourceCitation[]) => {
     const parts = text.split(/(```[\s\S]*?```)/g)
 
@@ -173,7 +200,7 @@ export function App() {
     })
   }
 
-  // Inline formatting for code `...` and citations [S1]
+  // Inline formatting for code `...` and scoped, clickable citations [S1]
   const renderInlineFormatting = (line: string, sources: SourceCitation[]) => {
     const tokens = line.split(/(`[^`]+`|\[S\d+\])/g)
     return tokens.map((token, idx) => {
@@ -182,19 +209,30 @@ export function App() {
       }
       if (/^\[S\d+\]$/.test(token)) {
         const sourceId = token.slice(1, -1)
-        const isVerifiedSource = sources?.some((s) => s.source_id === sourceId)
-        if (isVerifiedSource) {
+        const verifiedSource = sources?.find((s) => s.source_id === sourceId)
+        if (verifiedSource) {
           return (
-            <span
+            <a
               key={idx}
-              className="citation-badge"
-              title={`Referenced source ${sourceId}`}
+              href={`#source-${sourceId}`}
+              className="citation-badge citation-link"
+              title={`Source ${sourceId}: ${verifiedSource.section_title || 'Documentation'}`}
+              onClick={(e) => {
+                e.preventDefault()
+                const elem = document.getElementById(`source-${sourceId}`)
+                if (elem) {
+                  elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  elem.classList.add('source-card-highlight')
+                  setTimeout(() => elem.classList.remove('source-card-highlight'), 2000)
+                }
+              }}
             >
               {token}
-            </span>
+            </a>
           )
         }
-        return token
+        // Unknown citation identifier: renders as plain text without active link or badge
+        return <span key={idx} className="unverified-citation">{token}</span>
       }
       return token
     })
@@ -295,6 +333,12 @@ export function App() {
                   </div>
                 </div>
 
+                {askData.total_sources === 0 && (
+                  <div className="evidence-notice-banner">
+                    <strong>Limited Documentation Evidence:</strong> No indexed documentation sources met the relevance threshold for this query. The response is strictly bounded by available evidence.
+                  </div>
+                )}
+
                 {askData.sources && askData.sources.length > 0 && (
                   <div className="sources-section">
                     <h3 className="sources-title">
@@ -302,7 +346,7 @@ export function App() {
                     </h3>
                     <div className="sources-grid">
                       {askData.sources.map((src) => (
-                        <article key={src.source_id} className="source-card">
+                        <article id={`source-${src.source_id}`} key={src.source_id} className="source-card">
                           <div className="source-header">
                             <span className="source-id">{src.source_id}</span>
                             <span className="source-score" title="Vector similarity score">
@@ -444,7 +488,9 @@ export function App() {
                     <span className="model-badge">Model: {debugData.model}</span>
                   </div>
                   <div className="diagnosis-summary">
-                    <p className="summary-text">{debugData.error_summary}</p>
+                    <p className="summary-text">
+                      {renderFormattedText(debugData.error_summary, debugData.sources)}
+                    </p>
                   </div>
                 </div>
 
@@ -456,7 +502,9 @@ export function App() {
                       {debugData.likely_causes.map((cause, idx) => (
                         <div key={idx} className="cause-card">
                           <div className="cause-header">
-                            <h4 className="cause-name">{cause.cause}</h4>
+                            <h4 className="cause-name">
+                              {renderFormattedText(cause.cause, debugData.sources)}
+                            </h4>
                             {cause.citations && cause.citations.length > 0 && (
                               <div className="citation-pills">
                                 {cause.citations.map((c, cIdx) => (
@@ -481,7 +529,7 @@ export function App() {
                     <ol className="checks-list">
                       {debugData.diagnostic_checks.map((check, idx) => (
                         <li key={idx} className="check-item">
-                          <span>{check}</span>
+                          <span>{renderFormattedText(check, debugData.sources)}</span>
                         </li>
                       ))}
                     </ol>
@@ -496,7 +544,9 @@ export function App() {
                       {debugData.suggested_fixes.map((fix, idx) => (
                         <div key={idx} className="fix-card">
                           <div className="fix-header">
-                            <h4 className="fix-name">{fix.fix}</h4>
+                            <h4 className="fix-name">
+                              {renderFormattedText(fix.fix, debugData.sources)}
+                            </h4>
                             {fix.citations && fix.citations.length > 0 && (
                               <div className="citation-pills">
                                 {fix.citations.map((c, cIdx) => (
@@ -520,7 +570,7 @@ export function App() {
                     <div className="uncertainty-title">Documentation &amp; Diagnostic Scope Notes</div>
                     <ul className="uncertainty-list">
                       {debugData.uncertainty_notes.map((note, idx) => (
-                        <li key={idx}>{note}</li>
+                        <li key={idx}>{renderFormattedText(note, debugData.sources)}</li>
                       ))}
                     </ul>
                   </div>
@@ -534,7 +584,7 @@ export function App() {
                     </h3>
                     <div className="sources-grid">
                       {debugData.sources.map((src) => (
-                        <article key={src.source_id} className="source-card">
+                        <article id={`source-${src.source_id}`} key={src.source_id} className="source-card">
                           <div className="source-header">
                             <span className="source-id">{src.source_id}</span>
                             <span className="source-score" title="Vector similarity score">
@@ -564,7 +614,7 @@ export function App() {
       </main>
 
       <footer className="app-footer">
-        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Milestone 8</p>
+        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Milestone 9</p>
       </footer>
     </div>
   )

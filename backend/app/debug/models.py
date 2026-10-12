@@ -57,6 +57,14 @@ class SuggestedFix(BaseModel):
     citations: List[str] = Field(default_factory=list, description="Citation identifiers supporting this fix, e.g. ['S1'].")
 
 
+class RawDebugPayload(BaseModel):
+    error_summary: str = Field(..., min_length=1, description="Concise summary of the reported error.")
+    likely_causes: List[LikelyCause] = Field(default_factory=list)
+    diagnostic_checks: List[str] = Field(default_factory=list)
+    suggested_fixes: List[SuggestedFix] = Field(default_factory=list)
+    uncertainty_notes: List[str] = Field(default_factory=list)
+
+
 class DebugResponse(BaseModel):
     error_summary: str = Field(..., description="Concise summary of the reported error.")
     likely_causes: List[LikelyCause] = Field(default_factory=list, description="Plausible causes with explanations and citations.")

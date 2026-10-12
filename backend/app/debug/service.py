@@ -23,6 +23,7 @@ from app.debug.models import (
     DebugResponse,
     LikelyCause,
     SuggestedFix,
+    RawDebugPayload,
 )
 from app.debug.prompts import (
     DEBUG_SYSTEM_PROMPT,
@@ -220,13 +221,15 @@ class DebugService:
         raw_response = self.llm.generate(messages)
 
         parsed_data: Optional[Dict[str, Any]] = None
+        validated_payload: Optional[RawDebugPayload] = None
         validation: Optional[CitationValidationResult] = None
 
         try:
             parsed_data = parse_debug_json(raw_response)
+            validated_payload = RawDebugPayload.model_validate(parsed_data)
             validation = validate_debug_response_citations(parsed_data, raw_response, citations)
         except Exception as e:
-            logger.warning(f"Initial debug JSON parsing or validation failed: {e}")
+            logger.warning(f"Initial debug JSON parsing, schema, or citation validation failed: {e}")
             validation = CitationValidationResult(
                 is_valid=False,
                 is_refusal=False,
@@ -238,7 +241,7 @@ class DebugService:
             )
 
         # 8. Single corrective retry if validation failed
-        if not validation.is_valid:
+        if not validation.is_valid or not validated_payload:
             logger.warning(
                 f"Debug citation validation failed on first attempt: {validation.error_message}. "
                 "Attempting single corrective retry."
@@ -260,12 +263,14 @@ class DebugService:
             try:
                 retry_raw = self.llm.generate(retry_messages)
                 parsed_data = parse_debug_json(retry_raw)
+                validated_payload = RawDebugPayload.model_validate(parsed_data)
                 validation = validate_debug_response_citations(parsed_data, retry_raw, citations)
             except (GroqProviderError, GroqTimeoutError, GroqConfigurationError):
                 raise
             except Exception as e:
-                logger.error(f"Corrective retry parsing or validation failed: {e}")
+                logger.error(f"Corrective retry parsing, schema, or validation failed: {e}")
                 parsed_data = None
+                validated_payload = None
                 validation = CitationValidationResult(
                     is_valid=False,
                     is_refusal=False,
@@ -277,7 +282,7 @@ class DebugService:
                 )
 
         # 9. Fallback if validation still failed after retry
-        if not validation.is_valid or not parsed_data:
+        if not validation.is_valid or not validated_payload:
             logger.warning(
                 f"Debug diagnosis failed citation validation after retry: {validation.error_message}. "
                 "Returning controlled insufficient-evidence diagnosis."
@@ -309,53 +314,34 @@ class DebugService:
 
         # 10. Construct structured response and filter sources to only cited ones
         likely_causes_list: List[LikelyCause] = []
-        for item in parsed_data.get("likely_causes", []):
-            if isinstance(item, dict):
-                # Clean citation list to canonical IDs
-                raw_cits = item.get("citations", [])
-                clean_cits = [re.sub(r'[\[\]]', '', str(c)).strip().upper() for c in raw_cits if c]
-                likely_causes_list.append(
-                    LikelyCause(
-                        cause=str(item.get("cause", "Potential Cause")),
-                        explanation=str(item.get("explanation", "")),
-                        citations=clean_cits
-                    )
+        for cause in validated_payload.likely_causes:
+            raw_cits = cause.citations
+            clean_cits = [re.sub(r'[\[\]]', '', str(c)).strip().upper() for c in raw_cits if c]
+            likely_causes_list.append(
+                LikelyCause(
+                    cause=cause.cause,
+                    explanation=cause.explanation,
+                    citations=clean_cits
                 )
-            elif isinstance(item, str):
-                likely_causes_list.append(
-                    LikelyCause(
-                        cause=item,
-                        explanation=item,
-                        citations=extract_citations(item)
-                    )
-                )
+            )
 
         suggested_fixes_list: List[SuggestedFix] = []
-        for item in parsed_data.get("suggested_fixes", []):
-            if isinstance(item, dict):
-                raw_cits = item.get("citations", [])
-                clean_cits = [re.sub(r'[\[\]]', '', str(c)).strip().upper() for c in raw_cits if c]
-                suggested_fixes_list.append(
-                    SuggestedFix(
-                        fix=str(item.get("fix", "Corrective Action")),
-                        explanation=str(item.get("explanation", "")),
-                        citations=clean_cits
-                    )
+        for fix in validated_payload.suggested_fixes:
+            raw_cits = fix.citations
+            clean_cits = [re.sub(r'[\[\]]', '', str(c)).strip().upper() for c in raw_cits if c]
+            suggested_fixes_list.append(
+                SuggestedFix(
+                    fix=fix.fix,
+                    explanation=fix.explanation,
+                    citations=clean_cits
                 )
-            elif isinstance(item, str):
-                suggested_fixes_list.append(
-                    SuggestedFix(
-                        fix=item,
-                        explanation=item,
-                        citations=extract_citations(item)
-                    )
-                )
+            )
 
-        diagnostic_checks = [str(c) for c in parsed_data.get("diagnostic_checks", [])]
-        uncertainty_notes = [str(n) for n in parsed_data.get("uncertainty_notes", [])]
-        error_summary = str(parsed_data.get("error_summary", clean_error[:100]))
+        diagnostic_checks = validated_payload.diagnostic_checks
+        uncertainty_notes = validated_payload.uncertainty_notes
+        error_summary = validated_payload.error_summary
 
-        # Filter sources to only those cited in the response
+        # Filter sources to only those cited in the validated response
         cited_set = set(validation.cited_source_ids)
         final_sources = [c for c in citations if c.source_id in cited_set]
 

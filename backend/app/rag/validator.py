@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import List, Set, Optional
+from typing import List, Set, Optional, Dict, Any
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field
 from app.rag.models import SourceCitation
@@ -69,6 +69,50 @@ def extract_external_urls(text: str) -> List[str]:
     return external_urls
 
 
+def is_url_allowed(candidate_url: str, allowed_source_urls: Set[str]) -> bool:
+    """
+    Validate that candidate_url strictly matches an allowed source URL or is an
+    exact subpath/fragment of it, enforcing strict hostname boundaries, scheme, and port checks.
+    Rejects lookalike domains (e.g. fastapi.tiangolo.com.evil.com, fastapi.tiangolo.com@evil.com).
+    """
+    candidate = urlparse(candidate_url)
+    if candidate.scheme.lower() not in ("http", "https"):
+        return False
+
+    cand_host = (candidate.hostname or "").lower()
+    if not cand_host or cand_host in LOCAL_EXAMPLE_HOSTS:
+        return True
+
+    cand_port = candidate.port
+
+    for allowed_str in allowed_source_urls:
+        allowed = urlparse(allowed_str)
+        allowed_host = (allowed.hostname or "").lower()
+        if not allowed_host:
+            continue
+
+        # Strict exact hostname match - forbids prefix, suffix, and lookalike domain spoofing
+        if cand_host != allowed_host:
+            continue
+
+        # Strict scheme check
+        if candidate.scheme.lower() != allowed.scheme.lower():
+            continue
+
+        # Port match
+        if cand_port != allowed.port:
+            continue
+
+        # Path match with strict directory boundary
+        cand_path = candidate.path.rstrip("/")
+        allow_path = allowed.path.rstrip("/")
+
+        if cand_path == allow_path or cand_path.startswith(allow_path + "/"):
+            return True
+
+    return False
+
+
 def normalize_citation_syntax(text: str) -> str:
     """
     Normalize minor syntax variations such as lowercase [s1] to canonical [S1].
@@ -84,7 +128,7 @@ def validate_citations(
     Validate that:
     1. Every citation [S{n}] in answer belongs to the allowed_citations retrieved for this request.
     2. No fabricated or unknown source identifiers exist.
-    3. No fabricated documentation URLs exist.
+    3. No fabricated documentation URLs exist (with strict boundary checking).
     4. An informative grounded answer includes at least one valid citation.
     5. A truthful refusal requires no citations and is accepted.
     """
@@ -115,6 +159,7 @@ def validate_citations(
 
     # Allowed set of citation IDs for the current request
     allowed_id_set: Set[str] = {c.source_id for c in allowed_citations}
+    allowed_urls: Set[str] = {str(c.source_url).rstrip("/") for c in allowed_citations}
 
     # Extract all citations
     found_citations = extract_citations(sanitized)
@@ -129,19 +174,9 @@ def validate_citations(
         for m in malformed_matches:
             invalid_ids.append(f"Source {m}")
 
-    # Detect fabricated URLs
-    allowed_urls = {str(c.source_url).rstrip("/") for c in allowed_citations}
+    # Detect fabricated URLs using strict boundary check
     found_urls = extract_external_urls(sanitized)
-    fabricated_urls = []
-    for u in found_urls:
-        u_clean = u.rstrip("/")
-        # URL must match or be a fragment/sub-path of an allowed source URL
-        matched = any(
-            u_clean == au or u_clean.startswith(au + "#") or u_clean.startswith(au + "/")
-            for au in allowed_urls
-        )
-        if not matched:
-            fabricated_urls.append(u)
+    fabricated_urls = [u for u in found_urls if not is_url_allowed(u, allowed_urls)]
 
     # Check validation rules
     if invalid_ids:
@@ -201,54 +236,84 @@ def validate_debug_response_citations(
 ) -> CitationValidationResult:
     """
     Validate citations and documentation URLs across all fields of a structured debugging response.
+    Specifically checks:
+    - error_summary
+    - likely_causes[].cause, likely_causes[].explanation, likely_causes[].citations
+    - diagnostic_checks[]
+    - suggested_fixes[].fix, suggested_fixes[].explanation, suggested_fixes[].citations
+    - uncertainty_notes[]
+    - raw generated JSON for external URLs and malformed citations
     """
     allowed_id_set: Set[str] = {c.source_id for c in allowed_citations}
-    allowed_urls = {str(c.source_url).rstrip("/") for c in allowed_citations}
+    allowed_urls: Set[str] = {str(c.source_url).rstrip("/") for c in allowed_citations}
 
     all_cited: List[str] = []
+    invalid_ids: List[str] = []
+    fabricated_urls: List[str] = []
 
-    # 1. Extract from likely_causes
+    def check_text_snippet(text: Any):
+        if not text or not isinstance(text, str):
+            return
+        # 1. Valid citations
+        all_cited.extend(extract_citations(text))
+        # 2. Malformed citations (e.g. [Source 1])
+        for m in MALFORMED_CITATION_REGEX.findall(text):
+            invalid_ids.append(f"Source {m}")
+        # 3. External URLs
+        for u in extract_external_urls(text):
+            if not is_url_allowed(u, allowed_urls):
+                fabricated_urls.append(u)
+
+    # 1. Validate error_summary
+    check_text_snippet(debug_dict.get("error_summary"))
+
+    # 2. Validate likely_causes
     for cause in debug_dict.get("likely_causes", []):
         if isinstance(cause, dict):
+            check_text_snippet(cause.get("cause"))
+            check_text_snippet(cause.get("explanation"))
             for c_id in cause.get("citations", []):
                 cleaned_id = re.sub(r'[\[\]]', '', str(c_id)).strip().upper()
-                if cleaned_id:
+                if not cleaned_id or cleaned_id not in allowed_id_set:
+                    invalid_ids.append(str(c_id))
+                else:
                     all_cited.append(cleaned_id)
-            all_cited.extend(extract_citations(str(cause.get("explanation", ""))))
+        else:
+            invalid_ids.append(f"malformed_cause_{type(cause).__name__}")
 
-    # 2. Extract from suggested_fixes
+    # 3. Validate diagnostic_checks
+    for check in debug_dict.get("diagnostic_checks", []):
+        check_text_snippet(check)
+
+    # 4. Validate suggested_fixes
     for fix in debug_dict.get("suggested_fixes", []):
         if isinstance(fix, dict):
+            check_text_snippet(fix.get("fix"))
+            check_text_snippet(fix.get("explanation"))
             for c_id in fix.get("citations", []):
                 cleaned_id = re.sub(r'[\[\]]', '', str(c_id)).strip().upper()
-                if cleaned_id:
+                if not cleaned_id or cleaned_id not in allowed_id_set:
+                    invalid_ids.append(str(c_id))
+                else:
                     all_cited.append(cleaned_id)
-            all_cited.extend(extract_citations(str(fix.get("explanation", ""))))
+        else:
+            invalid_ids.append(f"malformed_fix_{type(fix).__name__}")
 
-    # 3. Extract from raw_json overall
-    all_cited.extend(extract_citations(raw_json))
+    # 5. Validate uncertainty_notes
+    for note in debug_dict.get("uncertainty_notes", []):
+        check_text_snippet(note)
 
-    unique_cited = sorted(list(dict.fromkeys(all_cited)))
+    # 6. Validate raw_json for any leaked external URLs or citations
+    check_text_snippet(raw_json)
 
-    # Detect unauthorized citations
-    invalid_ids = [sid for sid in unique_cited if sid not in allowed_id_set]
+    # Detect unauthorized citation IDs among cited
+    for cid in all_cited:
+        if cid not in allowed_id_set:
+            invalid_ids.append(cid)
 
-    # Detect malformed citations (e.g. [Source 1])
-    malformed = MALFORMED_CITATION_REGEX.findall(raw_json)
-    for m in malformed:
-        invalid_ids.append(f"Source {m}")
-
-    # Detect fabricated URLs
-    found_urls = extract_external_urls(raw_json)
-    fabricated_urls = []
-    for u in found_urls:
-        u_clean = u.rstrip("/")
-        matched = any(
-            u_clean == au or u_clean.startswith(au + "#") or u_clean.startswith(au + "/")
-            for au in allowed_urls
-        )
-        if not matched:
-            fabricated_urls.append(u)
+    unique_cited = sorted(list(dict.fromkeys([c for c in all_cited if c in allowed_id_set])))
+    invalid_ids = sorted(list(dict.fromkeys(invalid_ids)))
+    fabricated_urls = sorted(list(dict.fromkeys(fabricated_urls)))
 
     if invalid_ids:
         error = f"Debugging response contains unauthorized source identifier(s): {', '.join(invalid_ids)}."

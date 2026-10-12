@@ -321,3 +321,88 @@ def test_debug_service_request_isolation():
     assert resp1.sources[0].document_id == "doc_A"
     assert resp2.sources[0].document_id == "doc_B"
     assert resp1.sources[0].source_url != resp2.sources[0].source_url
+
+def test_debug_service_schema_validation_retry_and_success(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "openai/gpt-oss-120b"
+
+    # Attempt 1 has likely_causes as strings instead of dicts (fails Pydantic schema validation)
+    bad_schema = json.dumps({
+        "error_summary": "Summary",
+        "likely_causes": ["This is an invalid string cause"],
+        "diagnostic_checks": ["Check 1"],
+        "suggested_fixes": [],
+        "uncertainty_notes": []
+    })
+    # Attempt 2 has valid schema
+    good_schema = json.dumps({
+        "error_summary": "Valid summary",
+        "likely_causes": [{"cause": "Valid cause", "explanation": "Valid explanation [S1]", "citations": ["S1"]}],
+        "diagnostic_checks": ["Check 1"],
+        "suggested_fixes": [{"fix": "Fix", "explanation": "Fix explanation [S1]", "citations": ["S1"]}],
+        "uncertainty_notes": []
+    })
+    mock_llm.generate.side_effect = [bad_schema, good_schema]
+
+    service = DebugService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    req = DebugRequest(error_message="Error in app")
+    resp = service.diagnose(req)
+
+    assert mock_llm.generate.call_count == 2
+    assert resp.error_summary == "Valid summary"
+    assert resp.total_sources == 1
+
+def test_debug_service_schema_validation_retry_and_fallback(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "openai/gpt-oss-120b"
+
+    # Both attempts fail schema validation
+    bad_schema = json.dumps({
+        "error_summary": "Summary",
+        "likely_causes": ["Still an invalid string cause"],
+        "diagnostic_checks": ["Check 1"]
+    })
+    mock_llm.generate.side_effect = [bad_schema, bad_schema]
+
+    service = DebugService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    req = DebugRequest(error_message="Error in app")
+    resp = service.diagnose(req)
+
+    assert mock_llm.generate.call_count == 2
+    assert resp.total_sources == 0
+    assert "Insufficient documentation evidence" in resp.error_summary
+
+def test_debug_service_lookalike_url_retry_and_fallback(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "openai/gpt-oss-120b"
+
+    lookalike_json = json.dumps({
+        "error_summary": "Summary",
+        "likely_causes": [{
+            "cause": "Lookalike URL attempt",
+            "explanation": "See https://fastapi.tiangolo.com.evil.com/fake-page/ [S1]",
+            "citations": ["S1"]
+        }],
+        "diagnostic_checks": ["Check types"],
+        "suggested_fixes": [],
+        "uncertainty_notes": []
+    })
+    mock_llm.generate.side_effect = [lookalike_json, lookalike_json]
+
+    service = DebugService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    req = DebugRequest(error_message="ValidationError: input error")
+    resp = service.diagnose(req)
+
+    assert mock_llm.generate.call_count == 2
+    assert resp.total_sources == 0
+    assert resp.sources == []
+    assert "Insufficient documentation evidence" in resp.error_summary
