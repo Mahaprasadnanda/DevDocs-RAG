@@ -109,15 +109,20 @@ export function App() {
       }
       if (/^\[S\d+\]$/.test(token)) {
         const sourceId = token.slice(1, -1)
-        return (
-          <span
-            key={idx}
-            className="citation-badge"
-            title={`Referenced source ${sourceId}`}
-          >
-            {token}
-          </span>
-        )
+        const isVerifiedSource = data?.sources?.some((s) => s.source_id === sourceId)
+        if (isVerifiedSource) {
+          return (
+            <span
+              key={idx}
+              className="citation-badge"
+              title={`Referenced source ${sourceId}`}
+            >
+              {token}
+            </span>
+          )
+        }
+        // If unverified, render as plain text token rather than active citation badge
+        return token
       }
       return token
     })
@@ -232,7 +237,7 @@ export function App() {
       </main>
 
       <footer className="app-footer">
-        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Milestone 6</p>
+        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Milestone 7</p>
       </footer>
     </div>
   )

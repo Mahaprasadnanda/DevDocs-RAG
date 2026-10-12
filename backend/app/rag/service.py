@@ -2,10 +2,17 @@ import logging
 from typing import Optional
 from app.core.config import settings
 from app.retrieval.service import retrieval_service, RetrievalService
-from app.llm.client import groq_client, GroqLLMClient
+from app.llm.client import (
+    groq_client,
+    GroqLLMClient,
+    GroqProviderError,
+    GroqTimeoutError,
+    GroqConfigurationError,
+)
 from app.rag.models import AskResponse
 from app.rag.context import build_context
 from app.rag.prompts import SYSTEM_PROMPT, format_user_prompt
+from app.rag.validator import validate_citations, CitationValidationResult
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +32,7 @@ class RAGService:
         min_score: Optional[float] = None
     ) -> AskResponse:
         """
-        Orchestrate retrieval and grounded answer generation.
+        Orchestrate retrieval, grounded answer generation, and citation validation.
         """
         if not query or not query.strip():
             raise ValueError("Query cannot be empty or whitespace only.")
@@ -50,7 +57,7 @@ class RAGService:
                 model=self.llm.model
             )
 
-        # 3. Construct bounded context and structured citations
+        # 3. Construct bounded context and structured citations for THIS request
         context_text, citations = build_context(results, max_chars=settings.RAG_CONTEXT_MAX_CHARS)
 
         if not context_text:
@@ -63,20 +70,92 @@ class RAGService:
             )
 
         # 4. Construct grounded prompt
+        user_prompt = format_user_prompt(clean_query, context_text)
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": format_user_prompt(clean_query, context_text)}
+            {"role": "user", "content": user_prompt}
         ]
 
-        # 5. Call Groq LLM
+        # 5. Call Groq LLM (Attempt 1)
         logger.info(f"Calling Groq LLM model '{self.llm.model}' for grounded completion.")
-        answer_text = self.llm.generate(messages)
+        raw_answer = self.llm.generate(messages)
+
+        # 6. Validate citations against retrieved sources allowlist
+        validation = validate_citations(raw_answer, citations)
+
+        # 7. If validation fails, attempt exactly ONE deterministic corrective retry
+        if not validation.is_valid:
+            logger.warning(
+                f"Citation validation failed on first attempt: {validation.error_message}. "
+                "Attempting single corrective retry."
+            )
+            valid_ids_str = ", ".join([f"[{c.source_id}]" for c in citations])
+            corrective_instruction = (
+                f"Your previous response had a citation issue: {validation.error_message}\n"
+                f"The ONLY valid source identifiers for this question are: {valid_ids_str}.\n"
+                "Please rewrite the answer ensuring:\n"
+                "1. Every factual statement cites ONLY the valid source identifiers above using [S1], [S2], etc.\n"
+                "2. Do not include any fabricated URLs, external links, or unlisted source identifiers.\n"
+                "3. If the provided sources do not contain enough information to support an answer, state: "
+                "'The provided documentation does not contain enough information to answer this question.'"
+            )
+            retry_messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_prompt},
+                {"role": "assistant", "content": raw_answer},
+                {"role": "user", "content": corrective_instruction}
+            ]
+            try:
+                retry_answer = self.llm.generate(retry_messages)
+                validation = validate_citations(retry_answer, citations)
+            except (GroqProviderError, GroqTimeoutError, GroqConfigurationError):
+                raise
+            except Exception as e:
+                logger.error(f"Unexpected error during corrective retry: {e}")
+                validation = CitationValidationResult(
+                    is_valid=False,
+                    is_refusal=False,
+                    cited_source_ids=[],
+                    invalid_source_ids=[],
+                    fabricated_urls=[],
+                    error_message=str(e),
+                    sanitized_answer=""
+                )
+
+        # 8. If still invalid after retry, return controlled insufficient-evidence fallback
+        if not validation.is_valid:
+            logger.warning(
+                f"Answer failed citation validation after retry: {validation.error_message}. "
+                "Returning controlled insufficient-evidence response."
+            )
+            return AskResponse(
+                query=clean_query,
+                answer="The indexed documentation does not contain enough relevant information to answer this question.",
+                sources=[],
+                total_sources=0,
+                model=self.llm.model
+            )
+
+        # 9. Handle explicit refusal response
+        if validation.is_refusal:
+            logger.info("Model returned valid refusal due to insufficient context.")
+            return AskResponse(
+                query=clean_query,
+                answer=validation.sanitized_answer,
+                sources=[],
+                total_sources=0,
+                model=self.llm.model
+            )
+
+        # 10. Filter returned sources to ONLY those actually cited in the verified answer
+        cited_set = set(validation.cited_source_ids)
+        final_sources = [c for c in citations if c.source_id in cited_set]
 
         return AskResponse(
             query=clean_query,
-            answer=answer_text,
-            sources=citations,
-            total_sources=len(citations),
+            answer=validation.sanitized_answer,
+            sources=final_sources,
+            total_sources=len(final_sources),
             model=self.llm.model
         )
 

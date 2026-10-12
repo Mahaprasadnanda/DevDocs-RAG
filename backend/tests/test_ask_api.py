@@ -129,3 +129,56 @@ def test_ask_endpoint_with_min_score(mock_rag):
     resp = client.post("/api/v1/ask/", json={"query": "What is FastAPI?", "top_k": 5, "min_score": 0.40})
     assert resp.status_code == 200
     mock_rag.answer.assert_called_once_with(query="What is FastAPI?", top_k=5, min_score=0.40)
+
+@patch("app.api.routes.ask.rag_service")
+def test_ask_endpoint_response_schema_contract(mock_rag):
+    mock_rag.answer.return_value = AskResponse(
+        query="Explain path parameters",
+        answer="Path parameters are declared with curly braces [S1].",
+        sources=[
+            SourceCitation(
+                source_id="S1",
+                chunk_id="chunk_abc",
+                document_id="doc_xyz",
+                section_title="Path Parameters",
+                source_url="https://fastapi.tiangolo.com/tutorial/path-params/",
+                score=0.87
+            )
+        ],
+        total_sources=1,
+        model="openai/gpt-oss-120b"
+    )
+
+    resp = client.post("/api/v1/ask/", json={"query": "Explain path parameters"})
+    assert resp.status_code == 200
+    data = resp.json()
+
+    # Verify field existence and contract
+    assert "query" in data
+    assert "answer" in data
+    assert "sources" in data
+    assert "total_sources" in data
+    assert "model" in data
+
+    assert data["total_sources"] == len(data["sources"])
+    assert data["sources"][0]["source_id"] == "S1"
+    assert data["sources"][0]["source_url"] == "https://fastapi.tiangolo.com/tutorial/path-params/"
+    assert data["model"] == "openai/gpt-oss-120b"
+
+@patch("app.api.routes.ask.rag_service")
+def test_ask_endpoint_invalid_citations_fallback(mock_rag):
+    # If the model fails citation validation after retry, fallback answer is returned with sources=[]
+    mock_rag.answer.return_value = AskResponse(
+        query="What is quantum networking?",
+        answer="The indexed documentation does not contain enough relevant information to answer this question.",
+        sources=[],
+        total_sources=0,
+        model="openai/gpt-oss-120b"
+    )
+
+    resp = client.post("/api/v1/ask/", json={"query": "What is quantum networking?"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_sources"] == 0
+    assert data["sources"] == []
+    assert "not contain enough relevant information" in data["answer"]

@@ -133,3 +133,168 @@ def test_rag_service_propagates_provider_error(sample_retrieval_results):
     service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
     with pytest.raises(GroqProviderError, match="Groq service unavailable"):
         service.answer("query", top_k=2)
+
+def test_rag_service_subset_sources_returned(sample_retrieval_results):
+    # If 2 chunks retrieved, but answer only cites [S1], only S1 should be in returned sources
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    mock_llm.generate.return_value = "Only citing the first source here [S1]."
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert resp.total_sources == 1
+    assert len(resp.sources) == 1
+    assert resp.sources[0].source_id == "S1"
+
+def test_rag_service_unknown_citation_corrective_retry_success(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    # First attempt returns invalid citation [S9], second attempt corrects to [S1]
+    mock_llm.generate.side_effect = [
+        "First attempt references unauthorized [S9].",
+        "Corrected response references valid source [S1]."
+    ]
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert mock_llm.generate.call_count == 2
+    assert "Corrected response references valid source [S1]" in resp.answer
+    assert resp.total_sources == 1
+    assert resp.sources[0].source_id == "S1"
+
+def test_rag_service_unknown_citation_retry_exhausted_fallback(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    # Both attempts fail with unauthorized citation [S9]
+    mock_llm.generate.side_effect = [
+        "First attempt references unauthorized [S9].",
+        "Second attempt still references unauthorized [S9]."
+    ]
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert mock_llm.generate.call_count == 2
+    assert resp.total_sources == 0
+    assert resp.sources == []
+    assert "not contain enough relevant information" in resp.answer
+
+def test_rag_service_fabricated_url_retry_and_fallback(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    # Both attempts include fabricated URL
+    mock_llm.generate.side_effect = [
+        "Check out https://fastapi.tiangolo.com/nonexistent-feature/ [S1].",
+        "Still check https://fastapi.tiangolo.com/nonexistent-feature/ [S1]."
+    ]
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert resp.total_sources == 0
+    assert resp.sources == []
+    assert "not contain enough relevant information" in resp.answer
+
+def test_rag_service_missing_citations_retry_success(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    # Attempt 1 has no citations, attempt 2 provides [S1] and [S2]
+    mock_llm.generate.side_effect = [
+        "FastAPI is an async framework without citations.",
+        "FastAPI is an async framework [S1] supporting request bodies [S2]."
+    ]
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert mock_llm.generate.call_count == 2
+    assert resp.total_sources == 2
+    assert "[S1]" in resp.answer
+
+def test_rag_service_repeated_citations_preserves_unique_sources(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    mock_llm.generate.return_value = "Use @app.get() [S1]. Also [S1] is fast. Body in [S2]."
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("query", top_k=2)
+
+    assert resp.total_sources == 2
+    assert [s.source_id for s in resp.sources] == ["S1", "S2"]
+
+def test_rag_service_stateless_no_leak_between_requests():
+    # Request 1 retrieves doc_A with S1
+    # Request 2 retrieves doc_B with S1
+    res_A = [
+        RetrievalResult(
+            chunk_id="chunk_A",
+            text="Text A",
+            source_url="https://fastapi.tiangolo.com/docA/",
+            document_id="doc_A",
+            section_title="Doc A",
+            score=0.9
+        )
+    ]
+    res_B = [
+        RetrievalResult(
+            chunk_id="chunk_B",
+            text="Text B",
+            source_url="https://fastapi.tiangolo.com/docB/",
+            document_id="doc_B",
+            section_title="Doc B",
+            score=0.9
+        )
+    ]
+
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.side_effect = [res_A, res_B]
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    mock_llm.generate.side_effect = [
+        "Answer A citing [S1].",
+        "Answer B citing [S1]."
+    ]
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp1 = service.answer("query A")
+    resp2 = service.answer("query B")
+
+    assert resp1.sources[0].document_id == "doc_A"
+    assert resp2.sources[0].document_id == "doc_B"
+    assert resp1.sources[0].source_url != resp2.sources[0].source_url
+
+def test_rag_service_explicit_refusal_empty_sources(sample_retrieval_results):
+    mock_retrieval = MagicMock()
+    mock_retrieval.retrieve.return_value = sample_retrieval_results
+
+    mock_llm = MagicMock()
+    mock_llm.model = "test-model"
+    mock_llm.generate.return_value = "The provided documentation does not contain enough information to answer this question."
+
+    service = RAGService(retrieval_svc=mock_retrieval, llm=mock_llm)
+    resp = service.answer("How to build rockets in FastAPI?")
+
+    assert resp.total_sources == 0
+    assert resp.sources == []
+    assert "not contain enough information" in resp.answer
