@@ -192,3 +192,114 @@ def validate_citations(
         error_message=None,
         sanitized_answer=sanitized
     )
+
+
+def validate_debug_response_citations(
+    debug_dict: dict,
+    raw_json: str,
+    allowed_citations: List[SourceCitation]
+) -> CitationValidationResult:
+    """
+    Validate citations and documentation URLs across all fields of a structured debugging response.
+    """
+    allowed_id_set: Set[str] = {c.source_id for c in allowed_citations}
+    allowed_urls = {str(c.source_url).rstrip("/") for c in allowed_citations}
+
+    all_cited: List[str] = []
+
+    # 1. Extract from likely_causes
+    for cause in debug_dict.get("likely_causes", []):
+        if isinstance(cause, dict):
+            for c_id in cause.get("citations", []):
+                cleaned_id = re.sub(r'[\[\]]', '', str(c_id)).strip().upper()
+                if cleaned_id:
+                    all_cited.append(cleaned_id)
+            all_cited.extend(extract_citations(str(cause.get("explanation", ""))))
+
+    # 2. Extract from suggested_fixes
+    for fix in debug_dict.get("suggested_fixes", []):
+        if isinstance(fix, dict):
+            for c_id in fix.get("citations", []):
+                cleaned_id = re.sub(r'[\[\]]', '', str(c_id)).strip().upper()
+                if cleaned_id:
+                    all_cited.append(cleaned_id)
+            all_cited.extend(extract_citations(str(fix.get("explanation", ""))))
+
+    # 3. Extract from raw_json overall
+    all_cited.extend(extract_citations(raw_json))
+
+    unique_cited = sorted(list(dict.fromkeys(all_cited)))
+
+    # Detect unauthorized citations
+    invalid_ids = [sid for sid in unique_cited if sid not in allowed_id_set]
+
+    # Detect malformed citations (e.g. [Source 1])
+    malformed = MALFORMED_CITATION_REGEX.findall(raw_json)
+    for m in malformed:
+        invalid_ids.append(f"Source {m}")
+
+    # Detect fabricated URLs
+    found_urls = extract_external_urls(raw_json)
+    fabricated_urls = []
+    for u in found_urls:
+        u_clean = u.rstrip("/")
+        matched = any(
+            u_clean == au or u_clean.startswith(au + "#") or u_clean.startswith(au + "/")
+            for au in allowed_urls
+        )
+        if not matched:
+            fabricated_urls.append(u)
+
+    if invalid_ids:
+        error = f"Debugging response contains unauthorized source identifier(s): {', '.join(invalid_ids)}."
+        logger.warning(f"Debug citation validation error: {error}")
+        return CitationValidationResult(
+            is_valid=False,
+            is_refusal=False,
+            cited_source_ids=unique_cited,
+            invalid_source_ids=invalid_ids,
+            fabricated_urls=fabricated_urls,
+            error_message=error,
+            sanitized_answer=raw_json
+        )
+
+    if fabricated_urls:
+        error = f"Debugging response contains fabricated documentation URL(s): {', '.join(fabricated_urls)}."
+        logger.warning(f"Debug citation validation error: {error}")
+        return CitationValidationResult(
+            is_valid=False,
+            is_refusal=False,
+            cited_source_ids=unique_cited,
+            invalid_source_ids=[],
+            fabricated_urls=fabricated_urls,
+            error_message=error,
+            sanitized_answer=raw_json
+        )
+
+    # Check for empty citations: allowed if it's an insufficient documentation diagnosis
+    summary_text = str(debug_dict.get("error_summary", ""))
+    notes_text = " ".join([str(n) for n in debug_dict.get("uncertainty_notes", [])])
+    is_refusal = is_refusal_response(summary_text) or is_refusal_response(notes_text) or not debug_dict.get("likely_causes")
+
+    if not unique_cited and not is_refusal:
+        error = "Debugging response contains no source citations supporting the diagnosis."
+        logger.warning(f"Debug citation validation error: {error}")
+        return CitationValidationResult(
+            is_valid=False,
+            is_refusal=False,
+            cited_source_ids=[],
+            invalid_source_ids=[],
+            fabricated_urls=[],
+            error_message=error,
+            sanitized_answer=raw_json
+        )
+
+    return CitationValidationResult(
+        is_valid=True,
+        is_refusal=is_refusal,
+        cited_source_ids=unique_cited,
+        invalid_source_ids=[],
+        fabricated_urls=[],
+        error_message=None,
+        sanitized_answer=raw_json
+    )

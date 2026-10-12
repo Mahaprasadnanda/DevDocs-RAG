@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.core.config import settings
-from app.api.routes import health, retrieve, ask
+from app.api.routes import health, retrieve, ask, debug
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -11,3 +11,4 @@ app = FastAPI(
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(retrieve.router, prefix="/api/v1/retrieve", tags=["retrieve"])
 app.include_router(ask.router, prefix="/api/v1/ask", tags=["ask"])
+app.include_router(debug.router, prefix="/api/v1/debug", tags=["debug"])
