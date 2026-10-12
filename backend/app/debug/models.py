@@ -24,6 +24,16 @@ class DebugRequest(BaseModel):
         max_length=2000,
         description="Optional description of developer action, environment, or intent when error occurred."
     )
+    technology: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="Optional technology identifier, e.g. 'spring-boot', 'react', 'fastapi'."
+    )
+    version: Optional[str] = Field(
+        None,
+        max_length=50,
+        description="Optional documentation version filter."
+    )
     top_k: int = Field(
         8,
         gt=0,
@@ -74,3 +84,4 @@ class DebugResponse(BaseModel):
     total_sources: int = Field(..., description="Count of sources provided in the response.")
     uncertainty_notes: List[str] = Field(default_factory=list, description="What cannot be determined from the error or available documentation.")
     model: str = Field(..., description="The LLM model identifier used for generation.")
+    detected_technology: Optional[str] = Field(None, description="Identified or selected technology ecosystem.")

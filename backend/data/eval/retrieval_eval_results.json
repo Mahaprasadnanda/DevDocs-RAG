@@ -1,53 +1,137 @@
 {
   "summary": {
-    "timestamp": "2026-10-12T17:04:14Z",
-    "dataset_size": 32,
-    "in_domain_queries": 27,
-    "out_of_domain_queries": 5,
+    "timestamp": "2026-10-12T20:07:47Z",
+    "dataset_size": 44,
+    "in_domain_queries": 40,
+    "out_of_domain_queries": 4,
     "retrieval_parameters": {
       "top_k": 8,
       "min_score": 0.3,
       "metric_level": "document-level (collapsed chunks)"
     },
     "retrieval_quality": {
-      "recall_at_1": 0.7037,
-      "recall_at_3": 0.963,
+      "recall_at_1": 0.85,
+      "recall_at_3": 0.975,
       "recall_at_5": 1.0,
-      "mean_reciprocal_rank_mrr": 0.8302,
-      "in_domain_top1_matches": 19,
-      "in_domain_top3_matches": 26,
-      "in_domain_top5_matches": 27
+      "mean_reciprocal_rank_mrr": 0.9146,
+      "in_domain_top1_matches": 34,
+      "in_domain_top3_matches": 39,
+      "in_domain_top5_matches": 40
+    },
+    "by_technology": {
+      "fastapi": {
+        "queries": 12,
+        "recall_at_1": 0.5833,
+        "recall_at_3": 0.9167,
+        "recall_at_5": 1.0,
+        "mrr": 0.7569,
+        "abstention_rate": null
+      },
+      "react": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "django": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "flask": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "pydantic": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "spring-boot": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "nodejs": {
+        "queries": 4,
+        "recall_at_1": 0.75,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 0.875,
+        "abstention_rate": null
+      },
+      "go": {
+        "queries": 4,
+        "recall_at_1": 1.0,
+        "recall_at_3": 1.0,
+        "recall_at_5": 1.0,
+        "mrr": 1.0,
+        "abstention_rate": null
+      },
+      "unknown": {
+        "queries": 4,
+        "recall_at_1": null,
+        "recall_at_3": null,
+        "recall_at_5": null,
+        "mrr": null,
+        "abstention_rate": 0.5
+      }
     },
     "abstention_quality": {
-      "out_of_domain_total": 5,
-      "out_of_domain_abstained": 5,
-      "abstention_rate": 1.0
+      "out_of_domain_total": 4,
+      "out_of_domain_abstained": 2,
+      "abstention_rate": 0.5
     },
     "latency_ms": {
       "end_to_end": {
-        "mean": 14.67,
-        "median_p50": 14.57,
-        "p95": 17.55
+        "mean": 14.76,
+        "median_p50": 14.8,
+        "p95": 17.16
       },
       "embedding_only": {
-        "median_p50": 15.76,
-        "p95": 20.84
+        "median_p50": 15.66,
+        "p95": 19.13
       },
       "faiss_search_only": {
-        "median_p50": 0.04,
-        "p95": 0.08
+        "median_p50": 0.28,
+        "p95": 0.35
       }
     },
     "index_statistics": {
       "model_name": "sentence-transformers/all-MiniLM-L6-v2",
       "vector_dimension": 384,
-      "total_vectors": 99,
-      "total_documents": 5,
-      "index_disk_bytes": 268157,
+      "total_vectors": 2316,
+      "total_documents": 2316,
+      "technologies": [
+        "django",
+        "fastapi",
+        "flask",
+        "go",
+        "nodejs",
+        "pydantic",
+        "react",
+        "spring-boot"
+      ],
+      "index_disk_bytes": 6436231,
       "index_files": {
-        "manifest.json": 152,
-        "metadata.json": 115896,
-        "vector.index": 152109
+        "manifest.json": 497,
+        "metadata.json": 2878313,
+        "vector.index": 3557421
       }
     }
   },
@@ -57,12 +141,12 @@
       "query": "What command runs a FastAPI application with auto-reload enabled?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 15.17,
-      "embed_ms": 14476.64,
-      "search_ms": 3.64,
+      "latency_ms": 14.78,
+      "embed_ms": 39342.68,
+      "search_ms": 5.02,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 2,
-      "top_doc_score": 0.6257208585739136,
+      "top_doc_score": 0.6306415796279907,
       "first_relevant_rank": 2,
       "retrieved_docs": [
         "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff",
@@ -75,15 +159,16 @@
       "query": "Which base class must be inherited from Pydantic to declare a request body in FastAPI?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 18.67,
-      "embed_ms": 22.4,
-      "search_ms": 0.05,
+      "latency_ms": 15.74,
+      "embed_ms": 20.4,
+      "search_ms": 0.26,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 2,
-      "top_doc_score": 0.6554214954376221,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.6572460532188416,
       "first_relevant_rank": 1,
       "retrieved_docs": [
         "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360",
         "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff"
       ],
       "reciprocal_rank": 1.0
@@ -93,12 +178,12 @@
       "query": "What exception class is raised in FastAPI to return HTTP error responses?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 17.59,
-      "embed_ms": 17.78,
-      "search_ms": 0.05,
+      "latency_ms": 16.79,
+      "embed_ms": 19.15,
+      "search_ms": 0.28,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 1,
-      "top_doc_score": 0.7212942838668823,
+      "top_doc_score": 0.7446829080581665,
       "first_relevant_rank": 1,
       "retrieved_docs": [
         "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
@@ -110,12 +195,12 @@
       "query": "Which interactive documentation interfaces are automatically generated by FastAPI?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 14.66,
-      "embed_ms": 17.94,
-      "search_ms": 0.05,
+      "latency_ms": 13.65,
+      "embed_ms": 15.43,
+      "search_ms": 0.3,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 4,
-      "top_doc_score": 0.6535177230834961,
+      "top_doc_score": 0.6438494324684143,
       "first_relevant_rank": 4,
       "retrieved_docs": [
         "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
@@ -130,12 +215,12 @@
       "query": "What HTTP status code does FastAPI return when path parameter validation fails?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 17.37,
-      "embed_ms": 16.75,
-      "search_ms": 0.05,
+      "latency_ms": 15.91,
+      "embed_ms": 18.99,
+      "search_ms": 0.28,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 3,
-      "top_doc_score": 0.6175152063369751,
+      "top_doc_score": 0.6377476453781128,
       "first_relevant_rank": 2,
       "retrieved_docs": [
         "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a",
@@ -149,12 +234,12 @@
       "query": "What library does FastAPI rely on for data validation and schema definition?",
       "category": "factual",
       "answerable": true,
-      "latency_ms": 13.27,
-      "embed_ms": 16.93,
-      "search_ms": 0.04,
+      "latency_ms": 15.02,
+      "embed_ms": 14.44,
+      "search_ms": 0.25,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 3,
-      "top_doc_score": 0.7384280562400818,
+      "top_doc_score": 0.8043169975280762,
       "first_relevant_rank": 2,
       "retrieved_docs": [
         "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
@@ -168,392 +253,663 @@
       "query": "How do I instantiate the main FastAPI application object in code?",
       "category": "api_usage",
       "answerable": true,
-      "latency_ms": 14.37,
-      "embed_ms": 13.97,
-      "search_ms": 0.05,
+      "latency_ms": 14.35,
+      "embed_ms": 15.23,
+      "search_ms": 0.29,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 2,
-      "top_doc_score": 0.7193124890327454,
+      "top_doc_score": 0.7231243252754211,
       "first_relevant_rank": 1,
       "retrieved_docs": [
         "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff"
+        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_08",
-      "query": "How do I define a path parameter in a route URL and path operation function?",
+      "query": "How do I define a path parameter with Python type annotations in FastAPI?",
       "category": "api_usage",
       "answerable": true,
-      "latency_ms": 14.28,
-      "embed_ms": 16.67,
-      "search_ms": 0.05,
-      "chunks_retrieved": 6,
-      "unique_docs_retrieved": 3,
-      "top_doc_score": 0.4499111771583557,
+      "latency_ms": 13.8,
+      "embed_ms": 16.77,
+      "search_ms": 0.26,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.6952331066131592,
       "first_relevant_rank": 1,
       "retrieved_docs": [
         "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
         "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_09",
-      "query": "How do I define a request body using a Pydantic model in a path operation?",
+      "query": "How do I add custom headers when raising an HTTPException in FastAPI?",
       "category": "api_usage",
       "answerable": true,
-      "latency_ms": 11.57,
-      "embed_ms": 13.99,
-      "search_ms": 0.04,
+      "latency_ms": 13.76,
+      "embed_ms": 15.59,
+      "search_ms": 0.3,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 2,
-      "top_doc_score": 0.6823001503944397,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.6712425947189331,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff"
+        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_10",
-      "query": "How do I install a custom exception handler for an application-specific exception?",
+      "query": "How do I declare optional fields with default values in a Pydantic request body for FastAPI?",
       "category": "api_usage",
       "answerable": true,
-      "latency_ms": 15.57,
-      "embed_ms": 14.68,
-      "search_ms": 0.05,
+      "latency_ms": 15.35,
+      "embed_ms": 16.65,
+      "search_ms": 0.36,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 1,
-      "top_doc_score": 0.5784875154495239,
+      "unique_docs_retrieved": 4,
+      "top_doc_score": 0.7705909013748169,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
+        "4392292591f118b1aaed943e36ca9c84f7961b95e207e81086323442a56c8942",
+        "fd5aa44017b47ad418fc6a10b9088842455570eb97aef7afffd3d0122f7b5749",
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_11",
-      "query": "How do I pass custom HTTP response headers when raising an HTTPException?",
-      "category": "api_usage",
+      "query": "How do I access path parameters within a path operation function in FastAPI?",
+      "category": "similar_distinction",
       "answerable": true,
-      "latency_ms": 16.6,
-      "embed_ms": 16.67,
-      "search_ms": 0.08,
+      "latency_ms": 15.12,
+      "embed_ms": 16.58,
+      "search_ms": 0.27,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 1,
-      "top_doc_score": 0.5946859121322632,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.7251307368278503,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
+        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
+        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_12",
-      "query": "How do I return a JSON response from a basic GET endpoint?",
-      "category": "api_usage",
+      "query": "How do I access JSON payload attributes in a path operation function in FastAPI?",
+      "category": "similar_distinction",
       "answerable": true,
-      "latency_ms": 12.98,
-      "embed_ms": 15.79,
-      "search_ms": 0.04,
+      "latency_ms": 14.81,
+      "embed_ms": 14.58,
+      "search_ms": 0.28,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 4,
-      "top_doc_score": 0.47532281279563904,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.7247021794319153,
       "first_relevant_rank": 3,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a",
         "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff"
+        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff",
+        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
       ],
       "reciprocal_rank": 0.3333
     },
     {
       "id": "eval_13",
-      "query": "What parameters are required when raising an HTTPException in FastAPI?",
-      "category": "parameter",
+      "query": "How do I use the useState Hook in React to add a state variable?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 14.47,
-      "embed_ms": 14.25,
-      "search_ms": 0.03,
+      "latency_ms": 12.88,
+      "embed_ms": 13.86,
+      "search_ms": 0.29,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 1,
-      "top_doc_score": 0.6635907292366028,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.6909505724906921,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "009386030813e93696e8c73b7df6b658c8a465ad51504cdf708eca244336db50",
+        "d02f06bac391e6043649578340cf900927c5ddb85e5ba099b26b9441ee46b060"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_14",
-      "query": "How do I define an optional attribute with a default value of None in a request body model?",
-      "category": "parameter",
+      "query": "How do I run side effects after component rendering using useEffect in React?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 14.68,
-      "embed_ms": 16.69,
-      "search_ms": 0.04,
+      "latency_ms": 13.47,
+      "embed_ms": 14.87,
+      "search_ms": 0.26,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 3,
-      "top_doc_score": 0.5366123914718628,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.7101459503173828,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a",
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff"
+        "4d23b49b0284f9ac3b8528dcc90999b8039cd9fcd46f2945adbfbcc6883d8aaf"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_15",
-      "query": "How do I specify a path parameter that accepts a file path including slashes using path converters?",
-      "category": "parameter",
+      "query": "How does React describe UI with JSX and component markup?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 16.29,
-      "embed_ms": 15.48,
-      "search_ms": 0.04,
-      "chunks_retrieved": 6,
-      "unique_docs_retrieved": 3,
-      "top_doc_score": 0.5274057388305664,
+      "latency_ms": 15.05,
+      "embed_ms": 13.96,
+      "search_ms": 0.28,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7472006678581238,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
+        "7122f1233197b6a167582751c95996a2925c21528aa1712c9be9da8c2ec760c1",
+        "8234962172f4a6ef735d8c4bea2725acd19f0bc9d524239082fccc8455ce75fb"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_16",
-      "query": "How do I restrict a path parameter to a predefined set of values using Python Enum?",
-      "category": "parameter",
+      "query": "Why is state considered component memory in React?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 13.77,
-      "embed_ms": 16.84,
-      "search_ms": 0.08,
+      "latency_ms": 11.03,
+      "embed_ms": 12.36,
+      "search_ms": 0.26,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 2,
-      "top_doc_score": 0.5212858319282532,
+      "top_doc_score": 0.6438729763031006,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
+        "009386030813e93696e8c73b7df6b658c8a465ad51504cdf708eca244336db50",
+        "8234962172f4a6ef735d8c4bea2725acd19f0bc9d524239082fccc8455ce75fb"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_17",
-      "query": "What is the status_code argument used for in HTTPException?",
-      "category": "parameter",
+      "query": "How do I define URLconf routing and path patterns in Django?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 13.23,
-      "embed_ms": 11.88,
-      "search_ms": 0.04,
+      "latency_ms": 14.72,
+      "embed_ms": 14.56,
+      "search_ms": 0.42,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 1,
-      "top_doc_score": 0.5994651317596436,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7067747116088867,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "9501448170a6b72dcf8547c31ee149b6d76726e0c2ecefdb3dd3a7179696bacd",
+        "7359bb339ac704d2d307d932b45cf2de1eb41869cea02a5759bf331aa9257d3a"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_18",
-      "query": "How can a path operation function declare both path parameters and a request body at the same time?",
-      "category": "multi_detail",
+      "query": "How do I define database models and fields in Django models.py?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 15.14,
-      "embed_ms": 15.31,
-      "search_ms": 0.08,
+      "latency_ms": 14.01,
+      "embed_ms": 14.53,
+      "search_ms": 0.28,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 3,
-      "top_doc_score": 0.5186491012573242,
-      "first_relevant_rank": 3,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.741984486579895,
+      "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
+        "ae928e3ea3bcee1421198fed46b6627a8ed9baf322c5ec982e4a1166c47df9e7"
       ],
-      "reciprocal_rank": 0.3333
+      "reciprocal_rank": 1.0
     },
     {
       "id": "eval_19",
-      "query": "Why does the declaration order of path operations matter when using fixed paths and path parameters?",
-      "category": "multi_detail",
+      "query": "How do I return an HttpResponse from a Django view function?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 14.24,
-      "embed_ms": 15.66,
-      "search_ms": 0.04,
-      "chunks_retrieved": 3,
+      "latency_ms": 14.34,
+      "embed_ms": 17.27,
+      "search_ms": 0.28,
+      "chunks_retrieved": 8,
       "unique_docs_retrieved": 2,
-      "top_doc_score": 0.37738871574401855,
+      "top_doc_score": 0.7459205985069275,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd"
+        "a96a16388792d8d39f15b6d73a9ed0a388aef7b46daf0624d36aea779dd18afd",
+        "71bdc419074e222087834d4688aff465537c7e84627c50bcfe69fd50d61d3796"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_20",
-      "query": "How do I access and log the raw invalid request body when handling a RequestValidationError?",
-      "category": "multi_detail",
+      "query": "How do I handle HTML form validation and Form classes in Django?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 17.51,
-      "embed_ms": 15.94,
-      "search_ms": 0.05,
+      "latency_ms": 13.53,
+      "embed_ms": 14.09,
+      "search_ms": 0.21,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 1,
-      "top_doc_score": 0.6548799276351929,
+      "top_doc_score": 0.7176500558853149,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "b8918be0c33df71b72cd68592c460f45f62e6fe84305a02c067de0f54832265e"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_21",
-      "query": "What happens under the hood when a client sends invalid JSON types for a Pydantic body model?",
-      "category": "multi_detail",
+      "query": "How do I create a minimal Flask application with route handlers in quickstart?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 15.88,
-      "embed_ms": 16.9,
-      "search_ms": 0.05,
+      "latency_ms": 15.15,
+      "embed_ms": 16.67,
+      "search_ms": 0.28,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 2,
-      "top_doc_score": 0.5838391780853271,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.7172266244888306,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "71bdc419074e222087834d4688aff465537c7e84627c50bcfe69fd50d61d3796",
+        "14145930178ec9ad4008df4f8d43dc44b0bd5154dc71d56efdcb0e704b260aad",
+        "44c6274755dba8d5bcf7a09c59e12bd4fc8f4ba3061d1f19a6b5cfde49088aa9"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_22",
-      "query": "What is the relationship between FastAPI, Starlette, and Pydantic for API routing and validation?",
-      "category": "multi_detail",
+      "query": "How do I organize Flask endpoints into modular Blueprints?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 16.21,
-      "embed_ms": 16.25,
-      "search_ms": 0.03,
+      "latency_ms": 15.17,
+      "embed_ms": 15.3,
+      "search_ms": 0.29,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 4,
-      "top_doc_score": 0.6178679466247559,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.6585804224014282,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff",
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd"
+        "14145930178ec9ad4008df4f8d43dc44b0bd5154dc71d56efdcb0e704b260aad",
+        "71bdc419074e222087834d4688aff465537c7e84627c50bcfe69fd50d61d3796",
+        "0ecefa18a78d8b4390885653550b0c560e11a8c636a49cca27a37bd0b7357d3d"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_23",
-      "query": "How do I handle path parameters in FastAPI?",
-      "category": "similar_distinction",
+      "query": "How do I register custom error handlers with @app.errorhandler in Flask?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 11.47,
-      "embed_ms": 12.14,
-      "search_ms": 0.04,
+      "latency_ms": 14.5,
+      "embed_ms": 18.81,
+      "search_ms": 0.31,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 3,
-      "top_doc_score": 0.706791877746582,
+      "top_doc_score": 0.6855044364929199,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd"
+        "0ecefa18a78d8b4390885653550b0c560e11a8c636a49cca27a37bd0b7357d3d",
+        "14145930178ec9ad4008df4f8d43dc44b0bd5154dc71d56efdcb0e704b260aad",
+        "71bdc419074e222087834d4688aff465537c7e84627c50bcfe69fd50d61d3796"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_24",
-      "query": "How do I handle request bodies in FastAPI?",
-      "category": "similar_distinction",
+      "query": "How do I implement class-based method views in Flask views documentation?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 12.29,
-      "embed_ms": 12.53,
-      "search_ms": 0.04,
+      "latency_ms": 15.99,
+      "embed_ms": 14.46,
+      "search_ms": 0.26,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 3,
-      "top_doc_score": 0.6450886726379395,
-      "first_relevant_rank": 2,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.810725212097168,
+      "first_relevant_rank": 1,
       "retrieved_docs": [
-        "6355c1abf82e4fcf376601f7b46006cbebd218a9967846cc77b7be28e8577bff",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd"
+        "44c6274755dba8d5bcf7a09c59e12bd4fc8f4ba3061d1f19a6b5cfde49088aa9",
+        "71bdc419074e222087834d4688aff465537c7e84627c50bcfe69fd50d61d3796"
       ],
-      "reciprocal_rank": 0.5
+      "reciprocal_rank": 1.0
     },
     {
       "id": "eval_25",
-      "query": "How do I handle errors and exceptions in FastAPI?",
-      "category": "similar_distinction",
+      "query": "How do I define data validation schemas with Pydantic BaseModel?",
+      "category": "factual",
       "answerable": true,
-      "latency_ms": 11.9,
-      "embed_ms": 12.47,
-      "search_ms": 0.04,
+      "latency_ms": 17.22,
+      "embed_ms": 17.51,
+      "search_ms": 0.29,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 1,
-      "top_doc_score": 0.6811283230781555,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7296832799911499,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a"
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360",
+        "fd5aa44017b47ad418fc6a10b9088842455570eb97aef7afffd3d0122f7b5749"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_26",
-      "query": "How do I override the default RequestValidationError handler in FastAPI?",
-      "category": "similar_distinction",
+      "query": "How do I customize field constraints and descriptions using Field in Pydantic?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 14.07,
-      "embed_ms": 15.74,
-      "search_ms": 0.04,
+      "latency_ms": 15.81,
+      "embed_ms": 16.75,
+      "search_ms": 0.32,
       "chunks_retrieved": 8,
-      "unique_docs_retrieved": 2,
-      "top_doc_score": 0.8051222562789917,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.7641407251358032,
       "first_relevant_rank": 1,
       "retrieved_docs": [
-        "ad230cc28bf3ccef2b9fd9fde243db6117503c95e4adcac15f6d26397a79382a",
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455"
+        "4392292591f118b1aaed943e36ca9c84f7961b95e207e81086323442a56c8942",
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360",
+        "fd5aa44017b47ad418fc6a10b9088842455570eb97aef7afffd3d0122f7b5749"
       ],
       "reciprocal_rank": 1.0
     },
     {
       "id": "eval_27",
-      "query": "How do I define path operations in FastAPI first steps?",
-      "category": "similar_distinction",
+      "query": "How do I write custom field and model validators using @field_validator in Pydantic?",
+      "category": "api_usage",
       "answerable": true,
-      "latency_ms": 13.57,
-      "embed_ms": 12.24,
-      "search_ms": 0.05,
+      "latency_ms": 15.17,
+      "embed_ms": 15.34,
+      "search_ms": 0.25,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7473552227020264,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "fd5aa44017b47ad418fc6a10b9088842455570eb97aef7afffd3d0122f7b5749",
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_28",
+      "query": "What ValidationError structure does Pydantic return when input data fails validation?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 12.91,
+      "embed_ms": 14.85,
+      "search_ms": 0.23,
       "chunks_retrieved": 8,
       "unique_docs_retrieved": 3,
-      "top_doc_score": 0.6699907779693604,
+      "top_doc_score": 0.8286027908325195,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "2e2efd6bc45da031668546c946b0638acc8952c5ae30d6c8c53313685752fc99",
+        "fd5aa44017b47ad418fc6a10b9088842455570eb97aef7afffd3d0122f7b5749",
+        "0dd8b5783e79a261f4e8985079380b26a7fee22091edfe7175311c2250ef7360"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_29",
+      "query": "How do Spring Beans and dependency injection work in Spring Boot?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 11.0,
+      "embed_ms": 11.68,
+      "search_ms": 0.23,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 4,
+      "top_doc_score": 0.7254043221473694,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "da4663c0b2f73703f97309a13e49a0cecc790146e879cca04e1794b8c32de350",
+        "aee8bfb64b8ce920d0bd4bc54667c0a05fc7d58fa01c67a018c1ff9d71b5c75d",
+        "f023c00837702716f1a66a982c51c1b846959d4020c910fedc5f265ee795575e",
+        "6c234e8fb16f38db0e0d5c6a9d1cd63b0cf95199f49ea034ab8f3deee922a67c"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_30",
+      "query": "How do I build Spring MVC REST controllers and servlet applications in Spring Boot?",
+      "category": "api_usage",
+      "answerable": true,
+      "latency_ms": 14.2,
+      "embed_ms": 16.55,
+      "search_ms": 0.24,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7743867635726929,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "6c234e8fb16f38db0e0d5c6a9d1cd63b0cf95199f49ea034ab8f3deee922a67c",
+        "f023c00837702716f1a66a982c51c1b846959d4020c910fedc5f265ee795575e"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_31",
+      "query": "How do I configure external properties and YAML files in Spring Boot?",
+      "category": "api_usage",
+      "answerable": true,
+      "latency_ms": 15.15,
+      "embed_ms": 14.53,
+      "search_ms": 0.25,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.6911705732345581,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "aee8bfb64b8ce920d0bd4bc54667c0a05fc7d58fa01c67a018c1ff9d71b5c75d"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_32",
+      "query": "How do I define and activate environment profiles in Spring Boot?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 13.78,
+      "embed_ms": 11.42,
+      "search_ms": 0.27,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7318800091743469,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "e17704978949b4a663134ff87967481b1f7cb5f474a4262c035944fae02e75bf",
+        "aee8bfb64b8ce920d0bd4bc54667c0a05fc7d58fa01c67a018c1ff9d71b5c75d"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_33",
+      "query": "How do CommonJS require and module.exports function in Node.js?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 14.95,
+      "embed_ms": 17.7,
+      "search_ms": 0.27,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.8183540105819702,
       "first_relevant_rank": 2,
       "retrieved_docs": [
-        "6634008cc0069f6528f5c6a79d0b3f98169d3156a378c4336e9c96c626251455",
-        "94c74a9258b3dd5f91e343aa3b738455661d17d694e2d0503f1e41cc4fa70dbd",
-        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
+        "6a66d495cd2e7f6e18408d7dadfd011513ce0529386d1f245063ca38eae125b4",
+        "da2d270654dd374c8528805ddf78c79da485094233b9caab057568d726ed18b1"
       ],
       "reciprocal_rank": 0.5
     },
     {
-      "id": "eval_28",
+      "id": "eval_34",
+      "query": "How do ECMAScript ESM import and export statements work in Node.js?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 15.57,
+      "embed_ms": 18.23,
+      "search_ms": 0.26,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.7004677653312683,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "6a66d495cd2e7f6e18408d7dadfd011513ce0529386d1f245063ca38eae125b4"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_35",
+      "query": "How do I create an HTTP server using http.createServer in Node.js?",
+      "category": "api_usage",
+      "answerable": true,
+      "latency_ms": 14.44,
+      "embed_ms": 13.82,
+      "search_ms": 0.25,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.6512578725814819,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "67cc3a4b996ecabe1edece457e1a1264e62c95b218c38a7c86a7786883cc89d5"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_36",
+      "query": "How do I read files asynchronously using node fs promises in Node.js?",
+      "category": "api_usage",
+      "answerable": true,
+      "latency_ms": 14.19,
+      "embed_ms": 12.0,
+      "search_ms": 0.21,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 2,
+      "top_doc_score": 0.7215386629104614,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "1c5abe390a28fa9c0f9b2519a1e6bc1b329cf81897b39257bc0590fe9d5b5978",
+        "ddd34cbce76f02eaeaa0d4b77f790882ca33e458373b737fd670e5c8ff7d3ea4"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_37",
+      "query": "How do goroutines and channels work for concurrency in Go Effective Go?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 17.17,
+      "embed_ms": 17.11,
+      "search_ms": 0.29,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.7067350745201111,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "5d82dc9a454dc245a9c2c6f7318c3dc7ecc584aff60ddccd5711f93cba6105cf"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_38",
+      "query": "How do I return and inspect errors in Go tutorial handle errors?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 14.63,
+      "embed_ms": 15.72,
+      "search_ms": 0.31,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.6613091230392456,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "56e40ed92da29ade5f586cb5ed0083caab38240a993095059177a152b70a4a5f",
+        "5d82dc9a454dc245a9c2c6f7318c3dc7ecc584aff60ddccd5711f93cba6105cf",
+        "310e107da5e0415e15cc29e7e69951285fe483977afabf4245daacd579856c27"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_39",
+      "query": "How do I write a web application with net/http handlers in Go?",
+      "category": "api_usage",
+      "answerable": true,
+      "latency_ms": 17.11,
+      "embed_ms": 17.05,
+      "search_ms": 0.29,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.6921334862709045,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "4f88036a04d271be1852d28962f38b8c41a061ffe80176a44f99917c2f81d5c0",
+        "5d82dc9a454dc245a9c2c6f7318c3dc7ecc584aff60ddccd5711f93cba6105cf",
+        "310e107da5e0415e15cc29e7e69951285fe483977afabf4245daacd579856c27"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_40",
+      "query": "How do I install Go and initialize a module in getting started tutorial?",
+      "category": "factual",
+      "answerable": true,
+      "latency_ms": 16.65,
+      "embed_ms": 18.43,
+      "search_ms": 0.27,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.7074236869812012,
+      "first_relevant_rank": 1,
+      "retrieved_docs": [
+        "310e107da5e0415e15cc29e7e69951285fe483977afabf4245daacd579856c27",
+        "5d82dc9a454dc245a9c2c6f7318c3dc7ecc584aff60ddccd5711f93cba6105cf",
+        "4f88036a04d271be1852d28962f38b8c41a061ffe80176a44f99917c2f81d5c0"
+      ],
+      "reciprocal_rank": 1.0
+    },
+    {
+      "id": "eval_41",
       "query": "What is the difference between TCP and UDP transmission protocols?",
       "category": "out_of_domain",
       "answerable": false,
-      "latency_ms": 15.07,
-      "embed_ms": 14.81,
-      "search_ms": 0.05,
+      "latency_ms": 13.08,
+      "embed_ms": 13.48,
+      "search_ms": 0.25,
+      "chunks_retrieved": 8,
+      "unique_docs_retrieved": 3,
+      "top_doc_score": 0.44019240140914917,
+      "first_relevant_rank": null,
+      "retrieved_docs": [
+        "5d82dc9a454dc245a9c2c6f7318c3dc7ecc584aff60ddccd5711f93cba6105cf",
+        "67cc3a4b996ecabe1edece457e1a1264e62c95b218c38a7c86a7786883cc89d5",
+        "ddd34cbce76f02eaeaa0d4b77f790882ca33e458373b737fd670e5c8ff7d3ea4"
+      ],
+      "abstained_correctly": false
+    },
+    {
+      "id": "eval_42",
+      "query": "How do I calculate eigenvalues and eigenvectors using LAPACK in Fortran?",
+      "category": "out_of_domain",
+      "answerable": false,
+      "latency_ms": 16.44,
+      "embed_ms": 18.84,
+      "search_ms": 0.22,
+      "chunks_retrieved": 1,
+      "unique_docs_retrieved": 1,
+      "top_doc_score": 0.33410337567329407,
+      "first_relevant_rank": null,
+      "retrieved_docs": [
+        "a106cd5ebeea2961ab8d1ad42db31a448b5c9311e980b049564cb36b66044854"
+      ],
+      "abstained_correctly": false
+    },
+    {
+      "id": "eval_43",
+      "query": "How do I build quantum gates with IBM Qiskit quantum circuit simulator?",
+      "category": "out_of_domain",
+      "answerable": false,
+      "latency_ms": 13.5,
+      "embed_ms": 17.29,
+      "search_ms": 0.3,
       "chunks_retrieved": 0,
       "unique_docs_retrieved": 0,
       "top_doc_score": null,
@@ -562,58 +918,13 @@
       "abstained_correctly": true
     },
     {
-      "id": "eval_29",
-      "query": "How do I configure database connection pooling with SQLAlchemy and Alembic migrations?",
+      "id": "eval_44",
+      "query": "How do I deploy Kubernetes Helm charts with ArgoCD gitops pipelines?",
       "category": "out_of_domain",
       "answerable": false,
-      "latency_ms": 15.75,
-      "embed_ms": 19.57,
-      "search_ms": 0.04,
-      "chunks_retrieved": 0,
-      "unique_docs_retrieved": 0,
-      "top_doc_score": null,
-      "first_relevant_rank": null,
-      "retrieved_docs": [],
-      "abstained_correctly": true
-    },
-    {
-      "id": "eval_30",
-      "query": "How do I implement JWT token authentication with OAuth2 password bearer flow?",
-      "category": "out_of_domain",
-      "answerable": false,
-      "latency_ms": 12.63,
-      "embed_ms": 15.55,
-      "search_ms": 0.04,
-      "chunks_retrieved": 0,
-      "unique_docs_retrieved": 0,
-      "top_doc_score": null,
-      "first_relevant_rank": null,
-      "retrieved_docs": [],
-      "abstained_correctly": true
-    },
-    {
-      "id": "eval_31",
-      "query": "How do I configure Docker Swarm service replication and overlay networking?",
-      "category": "out_of_domain",
-      "answerable": false,
-      "latency_ms": 13.25,
-      "embed_ms": 15.6,
-      "search_ms": 0.04,
-      "chunks_retrieved": 0,
-      "unique_docs_retrieved": 0,
-      "top_doc_score": null,
-      "first_relevant_rank": null,
-      "retrieved_docs": [],
-      "abstained_correctly": true
-    },
-    {
-      "id": "eval_32",
-      "query": "How do I optimize React component re-rendering using useMemo and useCallback hooks?",
-      "category": "out_of_domain",
-      "answerable": false,
-      "latency_ms": 15.76,
-      "embed_ms": 17.79,
-      "search_ms": 0.04,
+      "latency_ms": 17.37,
+      "embed_ms": 17.17,
+      "search_ms": 0.33,
       "chunks_retrieved": 0,
       "unique_docs_retrieved": 0,
       "top_doc_score": null,

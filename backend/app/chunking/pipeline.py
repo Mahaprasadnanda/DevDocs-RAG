@@ -60,9 +60,16 @@ def run_chunking_pipeline() -> Dict[str, Any]:
             temp_out_file = out_file + ".tmp"
             with open(temp_out_file, "w", encoding="utf-8") as f:
                 json.dump([json.loads(c.model_dump_json()) for c in chunks], f, indent=2)
-                
             os.replace(temp_out_file, out_file)
-            
+                
+            tech = getattr(doc, "technology", "fastapi")
+            if "by_technology" not in results:
+                results["by_technology"] = {}
+            if tech not in results["by_technology"]:
+                results["by_technology"][tech] = {"documents": 0, "chunks": 0}
+            results["by_technology"][tech]["documents"] += 1
+            results["by_technology"][tech]["chunks"] += len(chunks)
+
             results["valid_documents_processed"] += 1
             results["total_chunks_generated"] += len(chunks)
             

@@ -8,6 +8,8 @@ interface SourceCitation {
   section_title: string | null
   source_url: string
   score: number
+  technology?: string
+  doc_version?: string
 }
 
 interface AskResponse {
@@ -16,6 +18,7 @@ interface AskResponse {
   sources: SourceCitation[]
   total_sources: number
   model: string
+  detected_technology?: string
 }
 
 interface LikelyCause {
@@ -39,15 +42,29 @@ interface DebugResponse {
   total_sources: number
   uncertainty_notes: string[]
   model: string
+  detected_technology?: string
 }
 
 type ActiveTab = 'ask' | 'debug'
+
+const TECHNOLOGIES = [
+  { id: 'auto', name: 'Auto-detect Ecosystem' },
+  { id: 'fastapi', name: 'FastAPI' },
+  { id: 'react', name: 'React' },
+  { id: 'django', name: 'Django' },
+  { id: 'flask', name: 'Flask' },
+  { id: 'pydantic', name: 'Pydantic' },
+  { id: 'spring-boot', name: 'Spring Boot' },
+  { id: 'nodejs', name: 'Node.js' },
+  { id: 'go', name: 'Go (Golang)' }
+]
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('ask')
 
   // Ask Mode state
   const [query, setQuery] = useState('')
+  const [askTech, setAskTech] = useState('auto')
   const [askTopK, setAskTopK] = useState(8)
   const [askLoading, setAskLoading] = useState(false)
   const [askError, setAskError] = useState<string | null>(null)
@@ -55,13 +72,26 @@ export function App() {
 
   // Debug Mode state
   const [errorMessage, setErrorMessage] = useState('')
-  const [framework, setFramework] = useState('FastAPI')
-  const [language, setLanguage] = useState('Python')
+  const [debugTech, setDebugTech] = useState('auto')
+  const [framework, setFramework] = useState('')
+  const [language, setLanguage] = useState('')
   const [context, setContext] = useState('')
   const [debugTopK, setDebugTopK] = useState(8)
   const [debugLoading, setDebugLoading] = useState(false)
   const [debugError, setDebugError] = useState<string | null>(null)
   const [debugData, setDebugData] = useState<DebugResponse | null>(null)
+
+  const handleAskTechChange = (tech: string) => {
+    setAskTech(tech)
+    setAskData(null)
+    setAskError(null)
+  }
+
+  const handleDebugTechChange = (tech: string) => {
+    setDebugTech(tech)
+    setDebugData(null)
+    setDebugError(null)
+  }
 
   const formatErrorMessage = (res: Response, json: any): string => {
     if (res.status === 422) {
@@ -95,10 +125,15 @@ export function App() {
     setAskData(null) // Prevents displaying stale response/citations while loading or on error
 
     try {
+      const payload: any = { query: query.trim(), top_k: askTopK }
+      if (askTech !== 'auto') {
+        payload.technology = askTech
+      }
+
       const res = await fetch('/api/v1/ask/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim(), top_k: askTopK })
+        body: JSON.stringify(payload)
       })
 
       const json = await res.json()
@@ -128,16 +163,21 @@ export function App() {
     setDebugData(null) // Prevents displaying stale diagnosis/citations while loading or on error
 
     try {
+      const payload: any = {
+        error_message: errorMessage.trim(),
+        framework: framework.trim() || undefined,
+        language: language.trim() || undefined,
+        context: context.trim() || undefined,
+        top_k: debugTopK
+      }
+      if (debugTech !== 'auto') {
+        payload.technology = debugTech
+      }
+
       const res = await fetch('/api/v1/debug/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          error_message: errorMessage.trim(),
-          framework: framework.trim() || undefined,
-          language: language.trim() || undefined,
-          context: context.trim() || undefined,
-          top_k: debugTopK
-        })
+        body: JSON.stringify(payload)
       })
 
       const json = await res.json()
@@ -200,40 +240,52 @@ export function App() {
     })
   }
 
-  // Inline formatting for code `...` and scoped, clickable citations [S1]
-  const renderInlineFormatting = (line: string, sources: SourceCitation[]) => {
-    const tokens = line.split(/(`[^`]+`|\[S\d+\])/g)
+  // Render inline formatting (citations [S1], inline `code`, bold **text**)
+  const renderInlineFormatting = (text: string, sources: SourceCitation[]): React.ReactNode[] => {
+    // Matches citation like [S1], inline code `something`, bold **bold**
+    const tokenRegex = /(\[S\d+\]|`[^`]+`|\*\*[^*]+\*\*)/g
+    const tokens = text.split(tokenRegex)
+
     return tokens.map((token, idx) => {
-      if (token.startsWith('`') && token.endsWith('`')) {
-        return <code key={idx} className="inline-code">{token.slice(1, -1)}</code>
-      }
       if (/^\[S\d+\]$/.test(token)) {
         const sourceId = token.slice(1, -1)
-        const verifiedSource = sources?.find((s) => s.source_id === sourceId)
-        if (verifiedSource) {
+        const sourceExists = sources.some(s => s.source_id === sourceId)
+
+        if (sourceExists) {
           return (
             <a
               key={idx}
               href={`#source-${sourceId}`}
-              className="citation-badge citation-link"
-              title={`Source ${sourceId}: ${verifiedSource.section_title || 'Documentation'}`}
-              onClick={(e) => {
-                e.preventDefault()
-                const elem = document.getElementById(`source-${sourceId}`)
-                if (elem) {
-                  elem.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                  elem.classList.add('source-card-highlight')
-                  setTimeout(() => elem.classList.remove('source-card-highlight'), 2000)
-                }
-              }}
+              className="citation-pill active-citation"
+              title={`Jump to Source [${sourceId}]`}
             >
               {token}
             </a>
           )
         }
-        // Unknown citation identifier: renders as plain text without active link or badge
-        return <span key={idx} className="unverified-citation">{token}</span>
+        return (
+          <span key={idx} className="citation-pill unverified-citation" title="Citation not in retrieved sources">
+            {token}
+          </span>
+        )
       }
+
+      if (token.startsWith('`') && token.endsWith('`') && token.length >= 2) {
+        return (
+          <code key={idx} className="inline-code">
+            {token.slice(1, -1)}
+          </code>
+        )
+      }
+
+      if (token.startsWith('**') && token.endsWith('**') && token.length >= 4) {
+        return (
+          <strong key={idx}>
+            {token.slice(2, -2)}
+          </strong>
+        )
+      }
+
       return token
     })
   }
@@ -241,10 +293,10 @@ export function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <div className="badge-tag">FastAPI &amp; Python Technical Assistant</div>
+        <div className="badge-tag">Documentation Intelligence</div>
         <h1 className="app-title">DevDocs RAG</h1>
         <p className="app-subtitle">
-          Retrieval-Augmented technical documentation search &amp; error diagnosis powered by FAISS and Groq LLM
+          Documentation-grounded assistant supporting 8 major frameworks with verified citations and diagnostic guidance.
         </p>
 
         {/* Tab Navigation */}
@@ -275,7 +327,7 @@ export function App() {
                 <textarea
                   className="query-input"
                   rows={3}
-                  placeholder="Ask a technical question (e.g. How do I define a POST endpoint in FastAPI?)..."
+                  placeholder="Ask a technical question (e.g. How do I use useState in React? or How to configure Spring Boot properties?)..."
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   disabled={askLoading}
@@ -283,19 +335,37 @@ export function App() {
               </div>
 
               <div className="form-controls">
-                <div className="topk-control">
-                  <label htmlFor="ask-top-k-select">Context Chunks:</label>
-                  <select
-                    id="ask-top-k-select"
-                    value={askTopK}
-                    onChange={(e) => setAskTopK(Number(e.target.value))}
-                    disabled={askLoading}
-                  >
-                    <option value={3}>3 chunks</option>
-                    <option value={5}>5 chunks</option>
-                    <option value={8}>8 chunks (default)</option>
-                    <option value={12}>12 chunks</option>
-                  </select>
+                <div className="filter-group">
+                  <div className="tech-control">
+                    <label htmlFor="ask-tech-select">Technology:</label>
+                    <select
+                      id="ask-tech-select"
+                      className="select-dropdown"
+                      value={askTech}
+                      onChange={(e) => handleAskTechChange(e.target.value)}
+                      disabled={askLoading}
+                    >
+                      {TECHNOLOGIES.map((tech) => (
+                        <option key={tech.id} value={tech.id}>{tech.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="topk-control">
+                    <label htmlFor="ask-top-k-select">Context Chunks:</label>
+                    <select
+                      id="ask-top-k-select"
+                      className="select-dropdown"
+                      value={askTopK}
+                      onChange={(e) => setAskTopK(Number(e.target.value))}
+                      disabled={askLoading}
+                    >
+                      <option value={3}>3 chunks</option>
+                      <option value={5}>5 chunks</option>
+                      <option value={8}>8 chunks (default)</option>
+                      <option value={12}>12 chunks</option>
+                    </select>
+                  </div>
                 </div>
 
                 <button
@@ -326,7 +396,12 @@ export function App() {
                 <div className="answer-card">
                   <div className="card-header">
                     <h2>Grounded Answer</h2>
-                    <span className="model-badge">Model: {askData.model}</span>
+                    <div className="badge-group">
+                      {askData.detected_technology && (
+                        <span className="tech-badge">Ecosystem: {askData.detected_technology}</span>
+                      )}
+                      <span className="model-badge">Model: {askData.model}</span>
+                    </div>
                   </div>
                   <div className="answer-content">
                     {renderFormattedText(askData.answer, askData.sources)}
@@ -348,7 +423,14 @@ export function App() {
                       {askData.sources.map((src) => (
                         <article id={`source-${src.source_id}`} key={src.source_id} className="source-card">
                           <div className="source-header">
-                            <span className="source-id">{src.source_id}</span>
+                            <div className="source-meta-left">
+                              <span className="source-id">{src.source_id}</span>
+                              {src.technology && (
+                                <span className="source-tech-tag">
+                                  {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
+                                </span>
+                              )}
+                            </div>
                             <span className="source-score" title="Vector similarity score">
                               Score: {src.score.toFixed(3)}
                             </span>
@@ -386,7 +468,7 @@ export function App() {
                   id="error-msg-input"
                   className="query-input code-font"
                   rows={5}
-                  placeholder="Paste error message or traceback here (e.g. pydantic.error_wrappers.ValidationError: 1 validation error for Item...)..."
+                  placeholder="Paste error message or traceback here (e.g. org.springframework.beans.factory.NoSuchBeanDefinitionException, or panic: runtime error...)..."
                   value={errorMessage}
                   onChange={(e) => setErrorMessage(e.target.value)}
                   disabled={debugLoading}
@@ -395,14 +477,31 @@ export function App() {
 
               <div className="input-grid">
                 <div className="input-group">
+                  <label className="input-label" htmlFor="debug-tech-select">
+                    Target Technology
+                  </label>
+                  <select
+                    id="debug-tech-select"
+                    className="select-dropdown full-width"
+                    value={debugTech}
+                    onChange={(e) => handleDebugTechChange(e.target.value)}
+                    disabled={debugLoading}
+                  >
+                    {TECHNOLOGIES.map((tech) => (
+                      <option key={tech.id} value={tech.id}>{tech.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="input-group">
                   <label className="input-label" htmlFor="framework-input">
-                    Framework / Library
+                    Framework / Subsystem (Optional)
                   </label>
                   <input
                     id="framework-input"
                     type="text"
                     className="text-input"
-                    placeholder="e.g. FastAPI, Starlette, Pydantic"
+                    placeholder="e.g. Spring Web, Express, Goroutines"
                     value={framework}
                     onChange={(e) => setFramework(e.target.value)}
                     disabled={debugLoading}
@@ -411,13 +510,13 @@ export function App() {
 
                 <div className="input-group">
                   <label className="input-label" htmlFor="language-input">
-                    Language
+                    Language (Optional)
                   </label>
                   <input
                     id="language-input"
                     type="text"
                     className="text-input"
-                    placeholder="e.g. Python, TypeScript"
+                    placeholder="e.g. Java, Go, TypeScript, Python"
                     value={language}
                     onChange={(e) => setLanguage(e.target.value)}
                     disabled={debugLoading}
@@ -433,7 +532,7 @@ export function App() {
                   id="context-input"
                   type="text"
                   className="text-input"
-                  placeholder="e.g. Sent POST payload to /items without price field"
+                  placeholder="e.g. Injected service bean in Spring Boot REST controller"
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   disabled={debugLoading}
@@ -445,6 +544,7 @@ export function App() {
                   <label htmlFor="debug-top-k-select">Context Chunks:</label>
                   <select
                     id="debug-top-k-select"
+                    className="select-dropdown"
                     value={debugTopK}
                     onChange={(e) => setDebugTopK(Number(e.target.value))}
                     disabled={debugLoading}
@@ -485,7 +585,12 @@ export function App() {
                 <div className="answer-card">
                   <div className="card-header">
                     <h2>Diagnosis Summary</h2>
-                    <span className="model-badge">Model: {debugData.model}</span>
+                    <div className="badge-group">
+                      {debugData.detected_technology && (
+                        <span className="tech-badge">Ecosystem: {debugData.detected_technology}</span>
+                      )}
+                      <span className="model-badge">Model: {debugData.model}</span>
+                    </div>
                   </div>
                   <div className="diagnosis-summary">
                     <p className="summary-text">
@@ -586,7 +691,14 @@ export function App() {
                       {debugData.sources.map((src) => (
                         <article id={`source-${src.source_id}`} key={src.source_id} className="source-card">
                           <div className="source-header">
-                            <span className="source-id">{src.source_id}</span>
+                            <div className="source-meta-left">
+                              <span className="source-id">{src.source_id}</span>
+                              {src.technology && (
+                                <span className="source-tech-tag">
+                                  {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
+                                </span>
+                              )}
+                            </div>
                             <span className="source-score" title="Vector similarity score">
                               Score: {src.score.toFixed(3)}
                             </span>
@@ -614,7 +726,7 @@ export function App() {
       </main>
 
       <footer className="app-footer">
-        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Milestone 9</p>
+        <p>DevDocs RAG &bull; Grounded on official technical documentation &bull; Eight Supported Technologies</p>
       </footer>
     </div>
   )

@@ -138,7 +138,9 @@ def process_document(doc: DocumentRecord, chunk_size: int, chunk_overlap: int) -
             canonical_url=doc.canonical_url,
             section_heading=current_section,
             chunk_index=i,
-            text=c_text
+            text=c_text,
+            technology=getattr(doc, "technology", "fastapi"),
+            doc_version=getattr(doc, "doc_version", None)
         )
         records.append(record)
         

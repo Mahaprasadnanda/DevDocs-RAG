@@ -6,6 +6,9 @@ from app.vector_store.embeddings import EmbeddingService
 from app.vector_store.index import VectorStore
 from app.core.config import settings
 
+from app.retrieval.tech_detector import detect_technology
+from app.ingestion.registry import get_technology_config
+
 logger = logging.getLogger(__name__)
 
 class IndexUnavailableError(Exception):
@@ -33,7 +36,9 @@ class RetrievalService:
         self,
         query: str,
         top_k: int = 8,
-        min_score: Optional[float] = None
+        min_score: Optional[float] = None,
+        technology: Optional[str] = None,
+        version: Optional[str] = None
     ) -> List[RetrievalResult]:
         if not query or not query.strip():
             raise ValueError("Query cannot be empty.")
@@ -47,19 +52,37 @@ class RetrievalService:
             return []
             
         threshold = min_score if min_score is not None else settings.RETRIEVAL_MIN_SCORE
-            
-        # Ensure we don't request more than available
-        k = min(top_k, self.store.index.ntotal)
+
+        # Resolve technology filter
+        target_techs: Optional[List[str]] = None
+        if technology and technology.strip().lower() not in ["auto", "all"]:
+            cfg = get_technology_config(technology.strip())
+            if cfg:
+                target_techs = [cfg.tech_id]
+            else:
+                target_techs = [technology.strip().lower()]
+        elif technology is not None and technology.strip().lower() == "auto":
+            detected = detect_technology(query=query)
+            if detected:
+                target_techs = detected
+
+        # When filtering by technology/version, retrieve a larger candidate pool from FAISS
+        # to ensure filtered results are not crowded out
+        if target_techs or version:
+            k_search = min(max(top_k * 6, 60), self.store.index.ntotal)
+        else:
+            k_search = min(top_k, self.store.index.ntotal)
         
         # Generate query embedding
         query_text = query.strip()
         query_embedding = self.embedder.encode([query_text], batch_size=1)
         
-        # Search
-        distances, indices = self.store.index.search(query_embedding, k)
+        # Search FAISS
+        distances, indices = self.store.index.search(query_embedding, k_search)
         
         results = []
-        for i in range(k):
+        num_candidates = min(k_search, len(indices[0]))
+        for i in range(num_candidates):
             idx = int(indices[0][i])
             score = float(distances[0][i])
             
@@ -80,6 +103,19 @@ class RetrievalService:
                 continue
                 
             chunk = self.store.metadata[idx]
+            chunk_tech = getattr(chunk, "technology", "fastapi")
+            chunk_ver = getattr(chunk, "doc_version", None)
+
+            # Apply technology filter if specified
+            if target_techs:
+                if chunk_tech not in target_techs:
+                    continue
+
+            # Apply version filter if specified
+            if version and chunk_ver:
+                if chunk_ver.lower() != version.lower():
+                    continue
+
             results.append(
                 RetrievalResult(
                     chunk_id=chunk.chunk_id,
@@ -87,10 +123,23 @@ class RetrievalService:
                     source_url=chunk.source_url,
                     document_id=chunk.document_id,
                     section_title=chunk.section_heading,
-                    score=score
+                    score=score,
+                    technology=chunk_tech,
+                    doc_version=chunk_ver
                 )
             )
-            
+
+            if len(results) >= top_k:
+                break
+                
         return results
+
+    def get_indexed_technologies(self) -> List[str]:
+        """Returns list of unique technologies currently present in the vector store."""
+        self._ensure_loaded()
+        techs = set()
+        for c in self.store.metadata:
+            techs.add(getattr(c, "technology", "fastapi"))
+        return sorted(list(techs))
 
 retrieval_service = RetrievalService()

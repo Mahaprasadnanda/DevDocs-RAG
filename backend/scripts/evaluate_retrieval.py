@@ -196,6 +196,49 @@ def run_evaluation(
                 index_files[f.name] = size
                 total_index_bytes += size
 
+    # Compute per-technology metrics
+    tech_stats: Dict[str, Dict[str, Any]] = {}
+    for item, q_res in zip(dataset, query_results):
+        t = item.get("technology", "fastapi")
+        if t not in tech_stats:
+            tech_stats[t] = {
+                "queries": 0,
+                "in_domain": 0,
+                "recall_1": 0,
+                "recall_3": 0,
+                "recall_5": 0,
+                "rr_sum": 0.0,
+                "out_of_domain": 0,
+                "abstained": 0
+            }
+        stats = tech_stats[t]
+        stats["queries"] += 1
+        if item.get("answerable", True):
+            stats["in_domain"] += 1
+            if q_res.get("first_relevant_rank") == 1:
+                stats["recall_1"] += 1
+            if q_res.get("first_relevant_rank") is not None and q_res["first_relevant_rank"] <= 3:
+                stats["recall_3"] += 1
+            if q_res.get("first_relevant_rank") is not None and q_res["first_relevant_rank"] <= 5:
+                stats["recall_5"] += 1
+            stats["rr_sum"] += q_res.get("reciprocal_rank", 0.0)
+        else:
+            stats["out_of_domain"] += 1
+            if q_res.get("abstained_correctly"):
+                stats["abstained"] += 1
+
+    by_tech_summary = {}
+    for t, s in tech_stats.items():
+        in_d = s["in_domain"]
+        by_tech_summary[t] = {
+            "queries": s["queries"],
+            "recall_at_1": round(s["recall_1"] / in_d, 4) if in_d > 0 else None,
+            "recall_at_3": round(s["recall_3"] / in_d, 4) if in_d > 0 else None,
+            "recall_at_5": round(s["recall_5"] / in_d, 4) if in_d > 0 else None,
+            "mrr": round(s["rr_sum"] / in_d, 4) if in_d > 0 else None,
+            "abstention_rate": round(s["abstained"] / s["out_of_domain"], 4) if s["out_of_domain"] > 0 else None
+        }
+
     summary = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "dataset_size": len(dataset),
@@ -215,6 +258,7 @@ def run_evaluation(
             "in_domain_top3_matches": recall_at_3_count,
             "in_domain_top5_matches": recall_at_5_count
         },
+        "by_technology": by_tech_summary,
         "abstention_quality": {
             "out_of_domain_total": out_of_domain_count,
             "out_of_domain_abstained": abstention_success_count,
@@ -239,7 +283,8 @@ def run_evaluation(
             "model_name": settings.EMBEDDING_MODEL_NAME,
             "vector_dimension": index_manifest.get("dimension", 384) if index_manifest else 384,
             "total_vectors": index_manifest.get("vector_count", len(retrieval_service.store.metadata)) if index_manifest else len(retrieval_service.store.metadata),
-            "total_documents": 5,
+            "total_documents": index_manifest.get("total_documents", len(retrieval_service.store.metadata)),
+            "technologies": index_manifest.get("technologies", []),
             "index_disk_bytes": total_index_bytes,
             "index_files": index_files
         }
@@ -269,6 +314,13 @@ def run_evaluation(
     print(f"Recall@5:                   {recall_at_5 * 100:.2f}% ({recall_at_5_count}/{in_domain_count})")
     print(f"Mean Reciprocal Rank (MRR): {mrr:.4f}")
     print(f"Abstention Filter Rate:     {abstention_rate * 100:.2f}% ({abstention_success_count}/{out_of_domain_count})")
+    print("--------------------------------------------------------------------------------")
+    print("PER-TECHNOLOGY BREAKDOWN:")
+    for tech, t_data in sorted(by_tech_summary.items()):
+        if t_data["recall_at_1"] is not None:
+            print(f"  {tech:<14} R@1={t_data['recall_at_1']*100:5.1f}% | R@3={t_data['recall_at_3']*100:5.1f}% | R@5={t_data['recall_at_5']*100:5.1f}% | MRR={t_data['mrr']:.4f} (N={t_data['queries']})")
+        else:
+            print(f"  {tech:<14} Abstention={t_data['abstention_rate']*100:5.1f}% (N={t_data['queries']})")
     print("--------------------------------------------------------------------------------")
     print(f"E2E Latency (p50):          {latency_p50:.2f} ms")
     print(f"E2E Latency (p95):          {latency_p95:.2f} ms")

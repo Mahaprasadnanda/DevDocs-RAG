@@ -10,14 +10,35 @@ def retrieve_documents(request: RetrievalRequest):
         raise HTTPException(status_code=422, detail="Query cannot be empty or whitespace only.")
         
     try:
-        if request.min_score is not None:
-            results = retrieval_service.retrieve(request.query, request.top_k, min_score=request.min_score)
+        if request.technology is not None or request.version is not None:
+            results = retrieval_service.retrieve(
+                request.query,
+                top_k=request.top_k,
+                min_score=request.min_score,
+                technology=request.technology,
+                version=request.version,
+            )
+        elif request.min_score is not None:
+            results = retrieval_service.retrieve(
+                request.query,
+                request.top_k,
+                min_score=request.min_score,
+            )
         else:
-            results = retrieval_service.retrieve(request.query, request.top_k)
+            results = retrieval_service.retrieve(
+                request.query,
+                request.top_k,
+            )
+
+        detected_tech = request.technology
+        if not detected_tech and results and results[0].technology:
+            detected_tech = results[0].technology
+
         return RetrievalResponse(
             query=request.query,
             results=results,
-            total_results=len(results)
+            total_results=len(results),
+            detected_technology=detected_tech
         )
     except IndexUnavailableError as e:
         raise HTTPException(status_code=503, detail=str(e))

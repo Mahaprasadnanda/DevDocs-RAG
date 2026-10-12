@@ -55,13 +55,21 @@ class VectorStore:
         temp_idx = self.index_path + ".tmp"
         faiss.write_index(self.index, temp_idx)
         
+        # Compute per-technology statistics
+        tech_counts = {}
+        for c in self.metadata:
+            t = getattr(c, "technology", "fastapi")
+            tech_counts[t] = tech_counts.get(t, 0) + 1
+
         # Write manifest for consistency checks
         manifest = {
             "version": "1.0",
             "model_name": self.model_name,
             "dimension": self.dimension,
             "vector_count": self.index.ntotal,
-            "metadata_count": len(self.metadata)
+            "metadata_count": len(self.metadata),
+            "technologies": sorted(list(tech_counts.keys())),
+            "technology_counts": tech_counts
         }
         
         temp_manifest = self.manifest_path + ".tmp"

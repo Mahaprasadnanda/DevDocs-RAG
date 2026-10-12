@@ -13,6 +13,7 @@ from app.llm.client import (
 )
 from app.rag.context import build_context
 from app.rag.models import SourceCitation
+from app.retrieval.tech_detector import detect_technology
 from app.rag.validator import (
     validate_debug_response_citations,
     extract_citations,
@@ -140,56 +141,79 @@ class DebugService:
         clean_error = sanitize_diagnostic_input(request.error_message)
         clean_context = sanitize_diagnostic_input(request.context) if request.context else None
 
+        # 2. Identify likely ecosystem from error, selected technology, and user context
+        raw_tech = request.technology or request.framework
+        detected_tech: Optional[str] = None
+        uncertain_ecosystem = False
+
+        if raw_tech and raw_tech.strip().lower() not in ["auto", "all"]:
+            detected_tech = raw_tech.strip().lower()
+        else:
+            detected_candidates = detect_technology(
+                query=request.error_message,
+                context=clean_context,
+                error_message=clean_error
+            )
+            if detected_candidates:
+                detected_tech = detected_candidates[0]
+            else:
+                uncertain_ecosystem = True
+
         logger.info(
-            f"Diagnosing error for framework='{request.framework}' language='{request.language}': "
+            f"Diagnosing error for tech='{detected_tech}' (uncertain={uncertain_ecosystem}) language='{request.language}': "
             f"'{clean_error[:60]}...'"
         )
 
-        # 2. Construct focused retrieval query
+        # 3. Construct focused retrieval query
         retrieval_query = build_debug_retrieval_query(
             clean_error,
-            request.framework,
+            detected_tech or request.framework,
             request.language,
             clean_context
         )
         logger.info(f"Generated debug retrieval query: '{retrieval_query}'")
 
-        # 3. Retrieve relevant documentation chunks using configured threshold
+        # 4. Retrieve relevant documentation chunks using configured threshold and technology filter
         results = self.retrieval_svc.retrieve(
             retrieval_query,
             top_k=request.top_k,
-            min_score=request.min_score
+            min_score=request.min_score,
+            technology=detected_tech,
+            version=request.version
         )
 
-        # 4. Handle empty retrieval result (no relevant chunks above threshold)
+        # 5. Handle empty retrieval result (no relevant chunks above threshold)
         if not results:
+            tech_label = detected_tech or "the selected technology"
             logger.info("No matching documentation chunks met relevance threshold for error.")
+            empty_notes = ["No relevant documentation excerpts were retrieved above the similarity threshold."]
+            if uncertain_ecosystem:
+                empty_notes.append("The technology ecosystem could not be identified with certainty from the provided error.")
             return DebugResponse(
-                error_summary="The provided error does not match any indexed documentation topics.",
+                error_summary=f"The provided error does not match any indexed documentation topics for {tech_label}.",
                 likely_causes=[
                     LikelyCause(
                         cause="Insufficient Documentation Evidence",
                         explanation=(
-                            "The indexed documentation (FastAPI tutorials) does not contain "
-                            "evidence or patterns matching this error."
+                            f"The indexed documentation does not contain "
+                            f"evidence or patterns matching this error in {tech_label}."
                         ),
                         citations=[]
                     )
                 ],
                 diagnostic_checks=[
-                    "Check if the error relates to indexed FastAPI documentation.",
+                    f"Check if the error relates to indexed documentation for {tech_label}.",
                     "Verify the error against official documentation or logs for the relevant framework."
                 ],
                 suggested_fixes=[],
                 sources=[],
                 total_sources=0,
-                uncertainty_notes=[
-                    "No relevant documentation excerpts were retrieved above the similarity threshold."
-                ],
-                model=self.llm.model
+                uncertainty_notes=empty_notes,
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
-        # 5. Build bounded context
+        # 6. Build bounded context
         context_text, citations = build_context(results, max_chars=settings.RAG_CONTEXT_MAX_CHARS)
         if not context_text:
             return DebugResponse(
@@ -200,7 +224,8 @@ class DebugService:
                 sources=[],
                 total_sources=0,
                 uncertainty_notes=["Retrieved documentation context was empty."],
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 6. Construct prompt
@@ -309,7 +334,8 @@ class DebugService:
                 uncertainty_notes=[
                     f"Generated diagnosis could not be verified against retrieved documentation: {validation.error_message}"
                 ],
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 10. Construct structured response and filter sources to only cited ones
@@ -338,7 +364,10 @@ class DebugService:
             )
 
         diagnostic_checks = validated_payload.diagnostic_checks
-        uncertainty_notes = validated_payload.uncertainty_notes
+        final_uncertainty = list(validated_payload.uncertainty_notes)
+        if uncertain_ecosystem and not any("ecosystem" in n.lower() or "framework" in n.lower() for n in final_uncertainty):
+            final_uncertainty.append("The technology ecosystem was inferred heuristically and may carry uncertainty.")
+
         error_summary = validated_payload.error_summary
 
         # Filter sources to only those cited in the validated response
@@ -352,8 +381,9 @@ class DebugService:
             suggested_fixes=suggested_fixes_list,
             sources=final_sources,
             total_sources=len(final_sources),
-            uncertainty_notes=uncertainty_notes,
-            model=self.llm.model
+            uncertainty_notes=final_uncertainty,
+            model=self.llm.model,
+            detected_technology=detected_tech
         )
 
 

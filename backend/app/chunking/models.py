@@ -10,3 +10,5 @@ class ChunkRecord(BaseModel):
     section_heading: Optional[str] = Field(None, description="The most relevant heading for this chunk, if any.")
     chunk_index: int = Field(..., description="The zero-based index of this chunk within the document.")
     text: str = Field(..., description="The text content of the chunk.")
+    technology: str = Field("fastapi", description="Technology identifier, e.g. 'fastapi', 'react', 'spring-boot'.")
+    doc_version: Optional[str] = Field(None, description="Documentation version label, e.g. '3.4', '19.0'.")

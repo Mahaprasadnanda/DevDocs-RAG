@@ -29,7 +29,9 @@ class RAGService:
         self,
         query: str,
         top_k: int = 8,
-        min_score: Optional[float] = None
+        min_score: Optional[float] = None,
+        technology: Optional[str] = None,
+        version: Optional[str] = None
     ) -> AskResponse:
         """
         Orchestrate retrieval, grounded answer generation, and citation validation.
@@ -41,10 +43,29 @@ class RAGService:
             raise ValueError("top_k must be a positive integer.")
 
         clean_query = query.strip()
-        logger.info(f"Retrieving context for query: '{clean_query[:50]}...' with top_k={top_k}")
+        logger.info(f"Retrieving context for query: '{clean_query[:50]}...' with top_k={top_k}, tech={technology}")
 
-        # 1. Retrieve top-k chunks (with relevance thresholding)
-        results = self.retrieval_svc.retrieve(clean_query, top_k=top_k, min_score=min_score)
+        # 1. Retrieve top-k chunks (with relevance thresholding and technology filtering)
+        if technology is not None or version is not None:
+            results = self.retrieval_svc.retrieve(
+                clean_query,
+                top_k=top_k,
+                min_score=min_score,
+                technology=technology,
+                version=version,
+            )
+        else:
+            results = self.retrieval_svc.retrieve(
+                clean_query,
+                top_k=top_k,
+                min_score=min_score,
+            )
+
+        detected_tech = None
+        if technology and technology.strip().lower() not in ["auto", "all"]:
+            detected_tech = technology.strip()
+        elif results and results[0].technology:
+            detected_tech = results[0].technology
 
         # 2. Handle empty retrieval result (out-of-domain or below relevance threshold)
         if not results:
@@ -54,7 +75,8 @@ class RAGService:
                 answer="The indexed documentation does not contain enough relevant information to answer this question.",
                 sources=[],
                 total_sources=0,
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 3. Construct bounded context and structured citations for THIS request
@@ -66,7 +88,8 @@ class RAGService:
                 answer="The indexed documentation does not contain enough relevant information to answer this question.",
                 sources=[],
                 total_sources=0,
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 4. Construct grounded prompt
@@ -133,7 +156,8 @@ class RAGService:
                 answer="The indexed documentation does not contain enough relevant information to answer this question.",
                 sources=[],
                 total_sources=0,
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 9. Handle explicit refusal response
@@ -144,7 +168,8 @@ class RAGService:
                 answer=validation.sanitized_answer,
                 sources=[],
                 total_sources=0,
-                model=self.llm.model
+                model=self.llm.model,
+                detected_technology=detected_tech
             )
 
         # 10. Filter returned sources to ONLY those actually cited in the verified answer
@@ -156,7 +181,8 @@ class RAGService:
             answer=validation.sanitized_answer,
             sources=final_sources,
             total_sources=len(final_sources),
-            model=self.llm.model
+            model=self.llm.model,
+            detected_technology=detected_tech
         )
 
 rag_service = RAGService()

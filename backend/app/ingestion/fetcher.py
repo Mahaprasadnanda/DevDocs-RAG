@@ -9,16 +9,16 @@ class FetchError(Exception):
     """Custom exception for fetcher errors."""
     pass
 
-def fetch_html(url: str) -> Tuple[str, httpx.Response]:
+def fetch_html(url: str, allowed_hosts: Optional[list] = None) -> Tuple[str, httpx.Response]:
     """
     Fetches HTML content from a URL synchronously.
     
     A synchronous client is chosen here because this is an offline CLI pipeline 
     processing a small curated list of pages sequentially. It simplifies the 
-    architecture without needing asyncio loops for just ~5 pages.
+    architecture without needing asyncio loops.
     
     Returns:
-        A tuple of (url, response_object).
+        A tuple of (final_url, response_object).
         
     Raises:
         FetchError if the fetch fails (timeout, bad status, etc.)
@@ -48,10 +48,15 @@ def fetch_html(url: str) -> Tuple[str, httpx.Response]:
             if len(response.content) > settings.INGESTION_MAX_RESPONSE_BYTES:
                 raise FetchError(f"Response body too large: {len(response.content)} bytes")
                 
-            # Restrict redirects to the original domain if desired. 
-            # In our case, we only accept https://fastapi.tiangolo.com/
-            if response.url.host != httpx.URL(url).host:
-                raise FetchError(f"Redirected to disallowed domain: {response.url.host}")
+            # Restrict redirects to approved hosts
+            orig_host = httpx.URL(url).host
+            resp_host = response.url.host
+            if allowed_hosts:
+                valid_hosts = [h.lower() for h in allowed_hosts] + [orig_host.lower()]
+                if not any(resp_host.lower() == h or resp_host.lower().endswith("." + h) for h in valid_hosts):
+                    raise FetchError(f"Redirected to disallowed domain: {resp_host}")
+            elif resp_host != orig_host:
+                raise FetchError(f"Redirected to disallowed domain: {resp_host}")
                 
             return str(response.url), response
             

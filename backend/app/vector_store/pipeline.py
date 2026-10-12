@@ -59,11 +59,18 @@ def run_indexing_pipeline() -> Dict[str, Any]:
         logger.error(f"Failed to build or save index: {e}")
         return {"error": f"Failed to build or save index: {e}"}
         
+    tech_counts = {}
+    for c in all_chunks:
+        t = getattr(c, "technology", "fastapi")
+        tech_counts[t] = tech_counts.get(t, 0) + 1
+
     return {
         "input_chunk_count": len(all_chunks),
         "embedding_model": settings.EMBEDDING_MODEL_NAME,
         "embedding_dimension": store.dimension,
         "vectors_indexed": store.index.ntotal,
+        "technologies_indexed": sorted(list(tech_counts.keys())),
+        "by_technology": tech_counts,
         "index_output_path": store.index_path,
         "metadata_output_path": store.metadata_path,
         "status": "success"

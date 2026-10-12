@@ -40,7 +40,9 @@ def build_context(
             document_id=r.document_id,
             section_title=r.section_title,
             source_url=r.source_url,
-            score=r.score
+            score=r.score,
+            technology=r.technology,
+            doc_version=r.doc_version
         )
         citations.append(citation)
 
