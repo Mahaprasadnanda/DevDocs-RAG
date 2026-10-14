@@ -102,6 +102,7 @@ class RAGService:
         # 5. Call Groq LLM (Attempt 1)
         logger.info(f"Calling Groq LLM model '{self.llm.model}' for grounded completion.")
         raw_answer = self.llm.generate(messages)
+        logger.info(f"Raw answer from LLM:\n{raw_answer}")
 
         # 6. Validate citations against retrieved sources allowlist
         validation = validate_citations(raw_answer, citations)
@@ -138,6 +139,7 @@ class RAGService:
             ]
             try:
                 retry_answer = self.llm.generate(retry_messages)
+                logger.info(f"Retry answer from LLM:\n{retry_answer}")
                 validation = validate_citations(retry_answer, citations)
             except (GroqProviderError, GroqTimeoutError, GroqConfigurationError):
                 raise

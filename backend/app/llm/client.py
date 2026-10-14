@@ -32,7 +32,7 @@ class GroqLLMClient:
 
     @property
     def api_key(self) -> Optional[str]:
-        return self._api_key or settings.GROQ_API_KEY
+        return self._api_key if self._api_key is not None else settings.GROQ_API_KEY
 
     @property
     def model(self) -> str:

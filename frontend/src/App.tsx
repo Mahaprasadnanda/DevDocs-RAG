@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import './App.css'
+import { MarkdownAnswer } from './MarkdownAnswer'
+import { formatComponentLabel } from './markdownUtils'
 
 interface SourceCitation {
   source_id: string
@@ -199,97 +201,7 @@ export function App() {
     }
   }
 
-  // Safe formatting of text with markdown code blocks and paragraphs
-  const renderFormattedText = (text: string, sources: SourceCitation[]) => {
-    const parts = text.split(/(```[\s\S]*?```)/g)
 
-    return parts.map((part, index) => {
-      if (part.startsWith('```') && part.endsWith('```')) {
-        const lines = part.slice(3, -3).trim().split('\n')
-        const firstLine = lines[0].trim()
-        const isLang = /^[a-zA-Z0-9_-]+$/.test(firstLine)
-        const lang = isLang ? firstLine : ''
-        const codeContent = isLang ? lines.slice(1).join('\n') : lines.join('\n')
-
-        return (
-          <div key={index} className="code-block-wrapper">
-            {lang && <span className="code-lang">{lang}</span>}
-            <pre className="code-block">
-              <code>{codeContent}</code>
-            </pre>
-          </div>
-        )
-      }
-
-      return (
-        <div key={index} className="prose-block">
-          {part.split('\n\n').map((paragraph, pIdx) => {
-            if (!paragraph.trim()) return null
-            return (
-              <p key={pIdx} className="answer-paragraph">
-                {paragraph.split('\n').map((line, lIdx) => (
-                  <React.Fragment key={lIdx}>
-                    {lIdx > 0 && <br />}
-                    {renderInlineFormatting(line, sources)}
-                  </React.Fragment>
-                ))}
-              </p>
-            )
-          })}
-        </div>
-      )
-    })
-  }
-
-  // Render inline formatting (citations [S1], inline `code`, bold **text**)
-  const renderInlineFormatting = (text: string, sources: SourceCitation[]): React.ReactNode[] => {
-    // Matches citation like [S1], inline code `something`, bold **bold**
-    const tokenRegex = /(\[S\d+\]|`[^`]+`|\*\*[^*]+\*\*)/g
-    const tokens = text.split(tokenRegex)
-
-    return tokens.map((token, idx) => {
-      if (/^\[S\d+\]$/.test(token)) {
-        const sourceId = token.slice(1, -1)
-        const sourceExists = sources.some(s => s.source_id === sourceId)
-
-        if (sourceExists) {
-          return (
-            <a
-              key={idx}
-              href={`#source-${sourceId}`}
-              className="citation-pill active-citation"
-              title={`Jump to Source [${sourceId}]`}
-            >
-              {token}
-            </a>
-          )
-        }
-        return (
-          <span key={idx} className="citation-pill unverified-citation" title="Citation not in retrieved sources">
-            {token}
-          </span>
-        )
-      }
-
-      if (token.startsWith('`') && token.endsWith('`') && token.length >= 2) {
-        return (
-          <code key={idx} className="inline-code">
-            {token.slice(1, -1)}
-          </code>
-        )
-      }
-
-      if (token.startsWith('**') && token.endsWith('**') && token.length >= 4) {
-        return (
-          <strong key={idx}>
-            {token.slice(2, -2)}
-          </strong>
-        )
-      }
-
-      return token
-    })
-  }
 
   return (
     <div className="app-container">
@@ -405,7 +317,7 @@ export function App() {
                     </div>
                   </div>
                   <div className="answer-content">
-                    {renderFormattedText(askData.answer, askData.sources)}
+                    <MarkdownAnswer content={askData.answer} sources={askData.sources} />
                   </div>
                 </div>
 
@@ -431,11 +343,17 @@ export function App() {
                                   {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
                                 </span>
                               )}
-                              {src.ecosystem_component && (
-                                <span className="source-component-tag" title={`Ecosystem Component: ${src.ecosystem_component}`}>
-                                  {src.ecosystem_component}
-                                </span>
-                              )}
+                              {src.ecosystem_component && (() => {
+                                const comp = formatComponentLabel(src.ecosystem_component, src.technology)
+                                return (
+                                  <span
+                                    className={`source-component-tag component-${comp.type}`}
+                                    title={`Ecosystem Component: ${comp.label}`}
+                                  >
+                                    {comp.label}
+                                  </span>
+                                )
+                              })()}
                             </div>
                             <span className="source-score" title="Vector similarity score">
                               Score: {src.score.toFixed(3)}
@@ -599,9 +517,7 @@ export function App() {
                     </div>
                   </div>
                   <div className="diagnosis-summary">
-                    <p className="summary-text">
-                      {renderFormattedText(debugData.error_summary, debugData.sources)}
-                    </p>
+                    <MarkdownAnswer content={debugData.error_summary} sources={debugData.sources} />
                   </div>
                 </div>
 
@@ -614,7 +530,7 @@ export function App() {
                         <div key={idx} className="cause-card">
                           <div className="cause-header">
                             <h4 className="cause-name">
-                              {renderFormattedText(cause.cause, debugData.sources)}
+                              <MarkdownAnswer content={cause.cause} sources={debugData.sources} inline={true} />
                             </h4>
                             {cause.citations && cause.citations.length > 0 && (
                               <div className="citation-pills">
@@ -625,7 +541,7 @@ export function App() {
                             )}
                           </div>
                           <div className="cause-explanation">
-                            {renderFormattedText(cause.explanation, debugData.sources)}
+                            <MarkdownAnswer content={cause.explanation} sources={debugData.sources} />
                           </div>
                         </div>
                       ))}
@@ -640,7 +556,7 @@ export function App() {
                     <ol className="checks-list">
                       {debugData.diagnostic_checks.map((check, idx) => (
                         <li key={idx} className="check-item">
-                          <span>{renderFormattedText(check, debugData.sources)}</span>
+                          <span><MarkdownAnswer content={check} sources={debugData.sources} /></span>
                         </li>
                       ))}
                     </ol>
@@ -656,7 +572,7 @@ export function App() {
                         <div key={idx} className="fix-card">
                           <div className="fix-header">
                             <h4 className="fix-name">
-                              {renderFormattedText(fix.fix, debugData.sources)}
+                              <MarkdownAnswer content={fix.fix} sources={debugData.sources} inline={true} />
                             </h4>
                             {fix.citations && fix.citations.length > 0 && (
                               <div className="citation-pills">
@@ -667,7 +583,7 @@ export function App() {
                             )}
                           </div>
                           <div className="fix-explanation">
-                            {renderFormattedText(fix.explanation, debugData.sources)}
+                            <MarkdownAnswer content={fix.explanation} sources={debugData.sources} />
                           </div>
                         </div>
                       ))}
@@ -681,7 +597,7 @@ export function App() {
                     <div className="uncertainty-title">Documentation &amp; Diagnostic Scope Notes</div>
                     <ul className="uncertainty-list">
                       {debugData.uncertainty_notes.map((note, idx) => (
-                        <li key={idx}>{renderFormattedText(note, debugData.sources)}</li>
+                        <li key={idx}><MarkdownAnswer content={note} sources={debugData.sources} inline={true} /></li>
                       ))}
                     </ul>
                   </div>
@@ -704,11 +620,17 @@ export function App() {
                                   {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
                                 </span>
                               )}
-                              {src.ecosystem_component && (
-                                <span className="source-component-tag" title={`Ecosystem Component: ${src.ecosystem_component}`}>
-                                  {src.ecosystem_component}
-                                </span>
-                              )}
+                              {src.ecosystem_component && (() => {
+                                const comp = formatComponentLabel(src.ecosystem_component, src.technology)
+                                return (
+                                  <span
+                                    className={`source-component-tag component-${comp.type}`}
+                                    title={`Ecosystem Component: ${comp.label}`}
+                                  >
+                                    {comp.label}
+                                  </span>
+                                )
+                              })()}
                             </div>
                             <span className="source-score" title="Vector similarity score">
                               Score: {src.score.toFixed(3)}

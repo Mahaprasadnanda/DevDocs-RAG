@@ -42,3 +42,4 @@ models/
 # Ingestion output
 backend/data/*
 !backend/data/eval/
+data/
