@@ -417,3 +417,72 @@ def test_ask_api_with_technology(mock_rag):
     data = response.json()
     assert data["detected_technology"] == "react"
     assert data["sources"][0]["technology"] == "react"
+
+
+# ---------------------------------------------------------------------------
+# 9. Spring Boot Retrieval Coverage and Ecosystem Component Tests
+# ---------------------------------------------------------------------------
+
+def test_get_ecosystem_component_mappings():
+    from app.ingestion.registry import get_ecosystem_component, get_technology_config
+    cfg = get_technology_config("spring-boot")
+    assert cfg is not None
+    assert get_ecosystem_component("https://docs.spring.io/spring-boot/reference/web/servlet.html", cfg) == "spring-boot-core"
+    assert get_ecosystem_component("https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html", cfg) == "spring-framework"
+    assert get_ecosystem_component("https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webmvc/filters/ratelimiter.html", cfg) == "spring-cloud-gateway"
+    assert get_ecosystem_component("https://resilience4j.readme.io/docs/ratelimiter", cfg) == "resilience4j (third-party library)"
+
+
+def test_build_context_includes_ecosystem_component():
+    from app.rag.context import build_context
+    result = RetrievalResult(
+        chunk_id="chunk_r4j",
+        text="Resilience4j provides rate limiting annotations.",
+        source_url="https://resilience4j.readme.io/docs/ratelimiter",
+        document_id="doc_r4j",
+        section_title="RateLimiter Internals",
+        score=0.75,
+        technology="spring-boot",
+        doc_version="3.4",
+        ecosystem_component="resilience4j (third-party library)"
+    )
+    context_text, citations = build_context([result])
+    assert "Component: resilience4j (third-party library)" in context_text
+    assert len(citations) == 1
+    assert citations[0].ecosystem_component == "resilience4j (third-party library)"
+
+
+def test_spring_boot_retrieval_live_coverage_q1_rest_api():
+    from app.retrieval.service import retrieval_service
+    q1 = "How do I create a simple REST API in Spring Boot using @RestController and @GetMapping?"
+    results = retrieval_service.retrieve(q1, top_k=5, technology="spring-boot")
+    assert len(results) > 0
+    assert results[0].score >= 0.50
+    assert any("RestController" in r.text or "GetMapping" in r.text or "Spring Web" in (r.section_title or "") for r in results)
+
+
+def test_spring_boot_retrieval_live_coverage_q2_constructor_injection():
+    from app.retrieval.service import retrieval_service
+    q2 = "How do I inject a service into a Spring Boot REST controller using constructor injection?"
+    results = retrieval_service.retrieve(q2, top_k=8, technology="spring-boot")
+    assert len(results) > 0
+    # Top score is well above threshold
+    assert results[0].score >= 0.50
+    # Verify constructor injection documentation is retrieved
+    has_di_doc = any(
+        "constructor" in r.text.lower() or "dependency injection" in r.text.lower()
+        for r in results
+    )
+    assert has_di_doc
+
+
+def test_spring_boot_retrieval_live_coverage_q3_rate_limiting():
+    from app.retrieval.service import retrieval_service
+    q3 = "How can I implement rate limiting for a Spring Boot REST API, and what approaches are documented?"
+    results = retrieval_service.retrieve(q3, top_k=8, technology="spring-boot")
+    assert len(results) > 0
+    # Top score is well above 0.50 (previously failed with no rate limiting docs)
+    assert results[0].score >= 0.55
+    components = {r.ecosystem_component for r in results if r.ecosystem_component}
+    # Rate limiting must retrieve Resilience4j or Spring Cloud Gateway
+    assert any(c in components for c in ["resilience4j (third-party library)", "spring-cloud-gateway"])

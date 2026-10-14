@@ -12,6 +12,7 @@ services:
       - GROQ_BASE_URL=${GROQ_BASE_URL:-https://api.groq.com}
       - GROQ_TIMEOUT_SECONDS=${GROQ_TIMEOUT_SECONDS:-30}
       - RETRIEVAL_MIN_SCORE=${RETRIEVAL_MIN_SCORE:-0.30}
+      - RAG_CONTEXT_MAX_CHARS=${RAG_CONTEXT_MAX_CHARS:-8000}
       - HF_HOME=/root/.cache/huggingface
     volumes:
       - hf_cache:/root/.cache/huggingface

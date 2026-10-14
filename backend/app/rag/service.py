@@ -113,15 +113,23 @@ class RAGService:
                 "Attempting single corrective retry."
             )
             valid_ids_str = ", ".join([f"[{c.source_id}]" for c in citations])
-            corrective_instruction = (
-                f"Your previous response had a citation issue: {validation.error_message}\n"
-                f"The ONLY valid source identifiers for this question are: {valid_ids_str}.\n"
-                "Please rewrite the answer ensuring:\n"
-                "1. Every factual statement cites ONLY the valid source identifiers above using [S1], [S2], etc.\n"
-                "2. Do not include any fabricated URLs, external links, or unlisted source identifiers.\n"
-                "3. If the provided sources do not contain enough information to support an answer, state: "
-                "'The provided documentation does not contain enough information to answer this question.'"
-            )
+            if not validation.cited_source_ids:
+                corrective_instruction = (
+                    f"Your previous response had a citation issue: {validation.error_message}\n"
+                    f"The valid source identifiers for this question are: {valid_ids_str}.\n"
+                    "Please rewrite the answer, keeping your explanations but adding inline bracketed citations [S1], [S2] to the supporting sources.\n"
+                    "Do not include any fabricated URLs or unlisted source identifiers."
+                )
+            else:
+                corrective_instruction = (
+                    f"Your previous response had a citation issue: {validation.error_message}\n"
+                    f"The ONLY valid source identifiers for this question are: {valid_ids_str}.\n"
+                    "Please rewrite the answer ensuring:\n"
+                    "1. Every factual statement cites ONLY the valid source identifiers above using [S1], [S2], etc.\n"
+                    "2. Do not include any fabricated URLs, external links, or unlisted source identifiers.\n"
+                    "3. If the provided sources do not contain enough information to support an answer, state: "
+                    "'The provided documentation does not contain enough information to answer this question.'"
+                )
             retry_messages = [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},

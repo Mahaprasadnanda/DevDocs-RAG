@@ -17,6 +17,7 @@ class SourceCitation(BaseModel):
     score: float = Field(..., description="Vector similarity score.")
     technology: Optional[str] = Field(None, description="Technology identifier.")
     doc_version: Optional[str] = Field(None, description="Documentation version.")
+    ecosystem_component: Optional[str] = Field(None, description="Ecosystem component identifier, e.g. 'spring-boot-core', 'spring-framework', 'spring-cloud-gateway', 'resilience4j'.")
 
 class AskResponse(BaseModel):
     query: str = Field(..., description="The original user query.")

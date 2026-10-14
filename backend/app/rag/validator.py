@@ -25,7 +25,11 @@ REFUSAL_PHRASES = (
     "no information provided",
 )
 
-LOCAL_EXAMPLE_HOSTS = ("localhost", "127.0.0.1", "0.0.0.0", "example.com", "json-schema.org")
+LOCAL_EXAMPLE_HOSTS = (
+    "localhost", "127.0.0.1", "0.0.0.0",
+    "example.com", "example.org", "example.net", "example.edu",
+    "json-schema.org"
+)
 
 
 class CitationValidationResult(BaseModel):
@@ -50,7 +54,8 @@ def extract_citations(text: str) -> List[str]:
     """
     Extract all [S{n}] citation identifiers from the text in order of appearance.
     """
-    matches = CITATION_REGEX.findall(text)
+    normalized = normalize_citation_syntax(text)
+    matches = CITATION_REGEX.findall(normalized)
     return [f"S{num}" for num in matches]
 
 
@@ -61,10 +66,11 @@ def extract_external_urls(text: str) -> List[str]:
     raw_urls = URL_REGEX.findall(text)
     external_urls = []
     for u in raw_urls:
-        cleaned = u.rstrip(".,;:)[]")
+        cleaned = re.sub(r'(\\[nrt]|[\s.,;:)\[\]`\'\"\\<>\n\r\t])+$', '', u.strip())
         parsed = urlparse(cleaned)
-        host = (parsed.hostname or "").lower()
-        if host and host not in LOCAL_EXAMPLE_HOSTS:
+        raw_host = (parsed.hostname or "").lower()
+        host = raw_host.split('\\')[0].split('/')[0]
+        if host and host not in LOCAL_EXAMPLE_HOSTS and not any(host.endswith("." + ex) for ex in LOCAL_EXAMPLE_HOSTS):
             external_urls.append(cleaned)
     return external_urls
 
@@ -80,7 +86,7 @@ def is_url_allowed(candidate_url: str, allowed_source_urls: Set[str]) -> bool:
         return False
 
     cand_host = (candidate.hostname or "").lower()
-    if not cand_host or cand_host in LOCAL_EXAMPLE_HOSTS:
+    if not cand_host or cand_host in LOCAL_EXAMPLE_HOSTS or any(cand_host.endswith("." + ex) for ex in LOCAL_EXAMPLE_HOSTS):
         return True
 
     cand_port = candidate.port
@@ -115,9 +121,14 @@ def is_url_allowed(candidate_url: str, allowed_source_urls: Set[str]) -> bool:
 
 def normalize_citation_syntax(text: str) -> str:
     """
-    Normalize minor syntax variations such as lowercase [s1] to canonical [S1].
+    Normalize minor syntax variations such as lowercase [s1] to canonical [S1],
+    and strip zero-width or formatting characters inside citation brackets.
     """
-    return re.sub(r'\[s(\d+)\]', r'[S\1]', text)
+    return re.sub(
+        r'\[[\u200b\u200c\u200d\ufeff\u202f\s]*[Ss](\d+)[\u200b\u200c\u200d\ufeff\u202f\s]*\]',
+        r'[S\1]',
+        text
+    )
 
 
 def validate_citations(

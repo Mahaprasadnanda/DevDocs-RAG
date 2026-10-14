@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     GROQ_BASE_URL: str = "https://api.groq.com"
     GROQ_TIMEOUT_SECONDS: float = 30.0
-    RAG_CONTEXT_MAX_CHARS: int = 4000
+    RAG_CONTEXT_MAX_CHARS: int = 8000
     
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

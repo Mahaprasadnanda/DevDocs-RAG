@@ -10,6 +10,7 @@ interface SourceCitation {
   score: number
   technology?: string
   doc_version?: string
+  ecosystem_component?: string
 }
 
 interface AskResponse {
@@ -430,6 +431,11 @@ export function App() {
                                   {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
                                 </span>
                               )}
+                              {src.ecosystem_component && (
+                                <span className="source-component-tag" title={`Ecosystem Component: ${src.ecosystem_component}`}>
+                                  {src.ecosystem_component}
+                                </span>
+                              )}
                             </div>
                             <span className="source-score" title="Vector similarity score">
                               Score: {src.score.toFixed(3)}
@@ -696,6 +702,11 @@ export function App() {
                               {src.technology && (
                                 <span className="source-tech-tag">
                                   {src.technology}{src.doc_version ? ` v${src.doc_version}` : ''}
+                                </span>
+                              )}
+                              {src.ecosystem_component && (
+                                <span className="source-component-tag" title={`Ecosystem Component: ${src.ecosystem_component}`}>
+                                  {src.ecosystem_component}
                                 </span>
                               )}
                             </div>

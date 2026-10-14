@@ -4,7 +4,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from app.core.config import settings
 from app.ingestion.sources import FASTAPI_DOCS_SOURCES
-from app.ingestion.registry import DOCUMENTATION_REGISTRY, get_technology_config, get_all_technologies
+from app.ingestion.registry import DOCUMENTATION_REGISTRY, get_technology_config, get_all_technologies, get_ecosystem_component
 from app.ingestion.fetcher import fetch_html, FetchError
 from app.ingestion.extractor import extract_document
 from app.ingestion.models import DocumentRecord
@@ -101,12 +101,14 @@ def run_pipeline(technology: Optional[str] = None) -> Dict[str, Any]:
                 final_url, response = fetch_html(url, allowed_hosts=tech_cfg.allowed_hosts)
                 
                 logger.info(f"Extracting content for [{tech_id}] {final_url}")
+                comp = get_ecosystem_component(final_url, tech_cfg)
                 document = extract_document(
                     response.text,
                     final_url,
                     technology=tech_id,
                     doc_version=tech_cfg.version,
-                    strategy=tech_cfg.extraction_strategy
+                    strategy=tech_cfg.extraction_strategy,
+                    ecosystem_component=comp
                 )
                 
                 # Persist to disk deterministically using doc_id

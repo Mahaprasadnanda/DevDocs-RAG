@@ -25,7 +25,13 @@ TECH_PATTERNS = {
         r"\bpom\.xml\b",
         r"\bmaven\b",
         r"\bgradle\b",
-        r"\bResponseEntity\b"
+        r"\bResponseEntity\b",
+        r"\bresilience4j\b",
+        r"\bspring[-\s]?cloud\b",
+        r"\bRequestRateLimiter\b",
+        r"\bKeyResolver\b",
+        r"\bBucket4j\b",
+        r"@RateLimiter"
     ],
     "nodejs": [
         r"\bnode(?:\.js)?\b",

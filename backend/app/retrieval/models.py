@@ -17,6 +17,7 @@ class RetrievalResult(BaseModel):
     score: float
     technology: Optional[str] = None
     doc_version: Optional[str] = None
+    ecosystem_component: Optional[str] = None
 
 class RetrievalResponse(BaseModel):
     query: str

@@ -116,6 +116,8 @@ class RetrievalService:
                 if chunk_ver.lower() != version.lower():
                     continue
 
+            chunk_comp = getattr(chunk, "ecosystem_component", None)
+
             results.append(
                 RetrievalResult(
                     chunk_id=chunk.chunk_id,
@@ -125,7 +127,8 @@ class RetrievalService:
                     section_title=chunk.section_heading,
                     score=score,
                     technology=chunk_tech,
-                    doc_version=chunk_ver
+                    doc_version=chunk_ver,
+                    ecosystem_component=chunk_comp
                 )
             )
 

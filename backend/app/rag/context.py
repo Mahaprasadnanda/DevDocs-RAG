@@ -4,7 +4,7 @@ from app.rag.models import SourceCitation
 
 def build_context(
     results: List[RetrievalResult],
-    max_chars: int = 4000
+    max_chars: int = 8000
 ) -> Tuple[str, List[SourceCitation]]:
     """
     Build a bounded textual context from retrieval results and map to structured citations.
@@ -21,7 +21,8 @@ def build_context(
         source_id = f"S{idx}"
         title = r.section_title or "Documentation Section"
         url_str = str(r.source_url)
-        header = f"--- Source [{source_id}] ---\nTitle: {title}\nURL: {url_str}\nContent:\n"
+        comp_str = f"Component: {r.ecosystem_component}\n" if r.ecosystem_component else ""
+        header = f"--- Source [{source_id}] ---\nTitle: {title}\n{comp_str}URL: {url_str}\nContent:\n"
         content = r.text.strip()
         block = header + content + "\n"
 
@@ -42,7 +43,8 @@ def build_context(
             source_url=r.source_url,
             score=r.score,
             technology=r.technology,
-            doc_version=r.doc_version
+            doc_version=r.doc_version,
+            ecosystem_component=getattr(r, "ecosystem_component", None)
         )
         citations.append(citation)
 

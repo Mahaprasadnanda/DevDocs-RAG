@@ -140,7 +140,8 @@ def process_document(doc: DocumentRecord, chunk_size: int, chunk_overlap: int) -
             chunk_index=i,
             text=c_text,
             technology=getattr(doc, "technology", "fastapi"),
-            doc_version=getattr(doc, "doc_version", None)
+            doc_version=getattr(doc, "doc_version", None),
+            ecosystem_component=getattr(doc, "ecosystem_component", None)
         )
         records.append(record)
         

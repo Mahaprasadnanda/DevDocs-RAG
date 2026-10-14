@@ -27,7 +27,15 @@ def find_content_container(soup: BeautifulSoup, technology: str, strategy: Optio
             return container
 
     if "spring" in strat:
-        container = soup.find("article", class_="doc") or soup.find("div", class_="doc") or soup.find("div", id="content")
+        container = (
+            soup.find("article", class_="doc")
+            or soup.find("div", class_="doc")
+            or soup.find("article", class_="rm-Article")
+            or soup.find("div", class_="rm-Article")
+            or soup.find("div", id="content")
+            or soup.find("main")
+            or soup.find("article")
+        )
         if container:
             return container
 
@@ -61,6 +69,7 @@ def find_content_container(soup: BeautifulSoup, technology: str, strategy: Optio
         soup.find("article", class_="md-content__inner")
         or soup.find("div", id="apicontent")
         or soup.find("article", class_="doc")
+        or soup.find("article", class_="rm-Article")
         or soup.find("div", id="docs-content")
         or soup.find("article")
         or soup.find("main")
@@ -74,7 +83,8 @@ def extract_document(
     source_url: str,
     technology: str = "fastapi",
     doc_version: Optional[str] = None,
-    strategy: Optional[str] = None
+    strategy: Optional[str] = None,
+    ecosystem_component: Optional[str] = None
 ) -> DocumentRecord:
     """
     Parses HTML and extracts the main documentation content across supported technologies.
@@ -130,5 +140,6 @@ def extract_document(
         headings=headings,
         text=cleaned_text,
         technology=technology,
-        doc_version=doc_version
+        doc_version=doc_version,
+        ecosystem_component=ecosystem_component
     )

@@ -12,6 +12,7 @@ class TechnologyConfig(BaseModel):
     urls: List[str] = Field(..., description="Curated documentation URLs to ingest.")
     extraction_strategy: str = Field("auto", description="Source-specific extraction strategy identifier.")
     aliases: List[str] = Field(default_factory=list, description="Alternative names and keywords for auto-detection.")
+    component_mappings: Dict[str, str] = Field(default_factory=dict, description="URL pattern to ecosystem component mapping.")
 
 
 # Official documentation registry for the 8 supported technologies
@@ -105,17 +106,30 @@ DOCUMENTATION_REGISTRY: Dict[str, TechnologyConfig] = {
         root_url="https://docs.spring.io/spring-boot/index.html",
         version="3.4",
         enabled=True,
-        allowed_hosts=["docs.spring.io"],
+        allowed_hosts=["docs.spring.io", "resilience4j.readme.io"],
         urls=[
             "https://docs.spring.io/spring-boot/index.html",
             "https://docs.spring.io/spring-boot/reference/using/index.html",
             "https://docs.spring.io/spring-boot/reference/using/spring-beans-and-dependency-injection.html",
             "https://docs.spring.io/spring-boot/reference/web/servlet.html",
             "https://docs.spring.io/spring-boot/reference/features/external-config.html",
-            "https://docs.spring.io/spring-boot/reference/features/profiles.html"
+            "https://docs.spring.io/spring-boot/reference/features/profiles.html",
+            "https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html",
+            "https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html",
+            "https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-requestmapping.html",
+            "https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webmvc/filters/ratelimiter.html",
+            "https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html",
+            "https://resilience4j.readme.io/docs/ratelimiter",
+            "https://resilience4j.readme.io/docs/getting-started-3"
         ],
         extraction_strategy="spring_docs",
-        aliases=["spring-boot", "springboot", "spring", "spring-mvc", "spring-framework"]
+        aliases=["spring-boot", "springboot", "spring", "spring-mvc", "spring-framework", "spring-cloud", "resilience4j"],
+        component_mappings={
+            "spring-boot": "spring-boot-core",
+            "spring-framework": "spring-framework",
+            "spring-cloud-gateway": "spring-cloud-gateway",
+            "resilience4j": "resilience4j (third-party library)"
+        }
     ),
     "nodejs": TechnologyConfig(
         tech_id="nodejs",
@@ -195,3 +209,12 @@ def validate_url_against_registry(url: str, tech_id: Optional[str] = None) -> bo
         if cfg.enabled and any(host == ah.lower() or host.endswith("." + ah.lower()) for ah in cfg.allowed_hosts):
             return True
     return False
+
+
+def get_ecosystem_component(url: str, tech_cfg: Optional[TechnologyConfig] = None) -> str:
+    """Determine the ecosystem component for a given URL based on technology config mappings."""
+    if tech_cfg and tech_cfg.component_mappings:
+        for pattern, comp in tech_cfg.component_mappings.items():
+            if pattern in url:
+                return comp
+    return tech_cfg.tech_id if tech_cfg else "unknown"

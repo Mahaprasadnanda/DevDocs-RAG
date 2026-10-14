@@ -11,4 +11,5 @@ class DocumentRecord(BaseModel):
     text: str = Field(..., description="Cleaned main text of the documentation page.")
     technology: str = Field("fastapi", description="Technology identifier, e.g. 'fastapi', 'react', 'spring-boot'.")
     doc_version: Optional[str] = Field(None, description="Documentation version label, e.g. '3.4', '19.0'.")
+    ecosystem_component: Optional[str] = Field(None, description="Ecosystem component identifier, e.g. 'spring-boot-core', 'spring-framework', 'spring-cloud-gateway', 'resilience4j'.")
     fetched_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Timestamp when the document was fetched.")
